@@ -247,7 +247,7 @@ python mock_sensor_sender.py
 
 ---
 
-### 10. 테스트 완료 항목
+## 10. 테스트 완료 항목
 
 - Swagger API 테스트 완료
 - Postman 정상 응답 테스트 완료
