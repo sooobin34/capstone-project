@@ -1,12 +1,29 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom"
 import Home from "./pages/Home"
+import About from "./pages/About"
+import Header from "./components/Header"
+import Footer from "./components/Footer"
 
 function App() {
-  return <Home />
+  return (
+    <BrowserRouter>
+      <Header />
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+      </Routes>
+
+      <Footer />
+    </BrowserRouter>
+  )
 }
 
 export default App
 
-/*imort { useState } from 'react'
+/*이 아래는 주석
+
+imort { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
