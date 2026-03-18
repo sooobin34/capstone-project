@@ -1,10 +1,21 @@
+import WaterLevelCard from "../components/dashboard/WaterLevelCard"
+import MapCard from "../components/dashboard/MapCard"
+import TrendChart from "../components/dashboard/TrendChart"
+import SummaryCard from "../components/dashboard/SummaryCard"
+
 export default function Home() {
   return (
-    <div className="bg-blue-500 text-white p-10">
-      Tailwind 적용 테스트
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <div className="grid grid-cols-2 gap-6">
+        <WaterLevelCard />
+        <MapCard />
+        <TrendChart />
+        <SummaryCard />
+      </div>
     </div>
   )
 }
+
 /*import Header from "../components/Header"
 import Footer from "../components/Footer"
 
