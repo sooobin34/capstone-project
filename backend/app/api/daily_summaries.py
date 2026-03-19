@@ -65,6 +65,7 @@ def create_daily_summary(payload: DailySummaryCreate, db: Session = Depends(get_
         record_date=payload.record_date,
         daily_status=daily_status,
         avg_inner_level=avg_decimal,
+        verification_image_url=payload.verification_image_url,
     )
 
     db.add(summary)

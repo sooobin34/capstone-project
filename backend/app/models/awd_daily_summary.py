@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -13,5 +13,6 @@ class AwdDailySummary(Base):
     record_date = Column(Date, nullable=False)
     daily_status = Column(String(20), nullable=False)
     avg_inner_level = Column(Numeric(5, 2), nullable=True)
-
+    verification_image_url = Column(Text, nullable=True)
+    
     node = relationship("IotNode")

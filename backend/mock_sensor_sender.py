@@ -5,9 +5,9 @@ from datetime import datetime, timezone, timedelta
 
 KST = timezone(timedelta(hours=9))
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://capstone-project-54l6.onrender.com"
 ENDPOINT = f"{BASE_URL}/sensor-logs"
-SEND_INTERVAL_SECONDS = 5
+SEND_INTERVAL_SECONDS = 600  # 데이터 보내는 주기(10분)
 NODE_IDS = [1]
 
 
