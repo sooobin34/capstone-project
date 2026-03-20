@@ -110,3 +110,22 @@ def get_sensor_logs_by_node(
     )
 
     return success_response(logs, "센서 로그 조회 성공")
+
+
+@router.get("/latest/{node_id}")
+def get_latest_sensor_log(node_id: int, db: Session = Depends(get_db)):
+    node = db.query(IotNode).filter(IotNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
+
+    latest_log = (
+        db.query(SensorLog)
+        .filter(SensorLog.node_id == node_id)
+        .order_by(SensorLog.measured_at.desc(), SensorLog.id.desc())
+        .first()
+    )
+
+    if not latest_log:
+        raise HTTPException(status_code=404, detail="해당 node의 센서 로그가 없습니다.")
+
+    return success_response(latest_log, "최신 센서 로그 조회 성공")

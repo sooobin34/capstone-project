@@ -3,23 +3,19 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 
-class IotNodeCreate(BaseModel):
-    field_id: int
-    mac_address: str
+class FieldCreate(BaseModel):
+    field_name: str
     latitude: Decimal
     longitude: Decimal
     location_desc: str | None = None
-    is_active: bool = True
 
 
-class IotNodeRead(BaseModel):
+class FieldRead(BaseModel):
     id: int
-    field_id: int
-    mac_address: str
+    field_name: str
     latitude: Decimal
     longitude: Decimal
     location_desc: str | None = None
-    is_active: bool
     created_at: datetime
 
     class Config:
