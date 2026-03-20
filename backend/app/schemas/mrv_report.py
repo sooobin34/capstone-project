@@ -4,11 +4,13 @@ from pydantic import BaseModel
 
 
 class MrvReportCreate(BaseModel):
+    field_id: int
     report_month: str
 
 
 class MrvReportRead(BaseModel):
     id: int
+    field_id: int
     report_month: str
     total_awd_cycles: int
     carbon_reduction: Decimal | None = None
