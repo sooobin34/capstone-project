@@ -37,22 +37,44 @@ def create_sensor_log(payload: SensorLogCreate, db: Session = Depends(get_db)):
     inner_level = float(payload.inner_water_level)
 
     if inner_level <= LOW_WATER_THRESHOLD:
-        alert = Alert(
-            node_id=payload.node_id,
-            alert_type="LOW_WATER",
-            message="내부 수위가 -15cm 이하로 떨어졌습니다. 재관개가 필요합니다."
+        existing_alert = (
+            db.query(Alert)
+            .filter(
+                Alert.node_id == payload.node_id,
+                Alert.alert_type == "LOW_WATER",
+                Alert.is_resolved == False
+            )
+            .first()
         )
-        db.add(alert)
-        db.commit()
+
+        if not existing_alert:
+            alert = Alert(
+                node_id=payload.node_id,
+                alert_type="LOW_WATER",
+                message="내부 수위가 -15cm 이하로 떨어졌습니다. 재관개가 필요합니다."
+            )
+            db.add(alert)
+            db.commit()
 
     elif inner_level >= HIGH_WATER_THRESHOLD:
-        alert = Alert(
-            node_id=payload.node_id,
-            alert_type="HIGH_WATER",
-            message="내부 수위가 기준 이상으로 높습니다."
+        existing_alert = (
+            db.query(Alert)
+            .filter(
+                Alert.node_id == payload.node_id,
+                Alert.alert_type == "HIGH_WATER",
+                Alert.is_resolved == False
+            )
+            .first()
         )
-        db.add(alert)
-        db.commit()
+
+        if not existing_alert:
+            alert = Alert(
+                node_id=payload.node_id,
+                alert_type="HIGH_WATER",
+                message="내부 수위가 기준 이상으로 높습니다."
+            )
+            db.add(alert)
+            db.commit()
 
     return success_response(sensor_log, "센서 로그 저장 성공")
 
