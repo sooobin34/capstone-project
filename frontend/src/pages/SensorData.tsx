@@ -27,13 +27,17 @@ export default function SensorData() {
   const nodes = selectedFieldId ? mockNodes[selectedFieldId] ?? [] : []
   const singleMode = selectedNodeId !== null
 
-  const datasets = singleMode
+  const datasets = !selectedFieldId
+  ? []
+  : singleMode
     ? [{ nodeId: selectedNodeId!, label: nodes.find(n => n.id === selectedNodeId)?.label ?? '', data: mockData }]
-    : nodes.map((node, i) => ({
-        nodeId: node.id,
-        label: node.label,
-        data: mockData.map(v => v + i * 0.5),
-      }))
+    : nodes.length > 0
+      ? nodes.map((node, i) => ({
+          nodeId: node.id,
+          label: node.label,
+          data: mockData.map(v => +(v + i * 0.5).toFixed(1)),
+        }))
+      : []
 
   return (
     <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
