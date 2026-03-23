@@ -1,8 +1,8 @@
-
 import { useState } from 'react'
 import Home from './pages/Home'
 import SensorData from './pages/SensorData'
 import MapPage from './pages/MapPage'
+import MrvPage from './pages/MrvPage'
 
 const navItems = ['대시보드', '센서 데이터', '지도', 'MRV']
 
@@ -14,6 +14,7 @@ export default function App() {
       case '대시보드': return <Home />
       case '센서 데이터': return <SensorData />
       case '지도': return <MapPage />
+      case 'MRV': return <MrvPage />
       default: return <Home />
     }
   }
@@ -51,10 +52,12 @@ export default function App() {
     </div>
   )
 }
-/*아래는 메뉴2 생성까지 정상 작동
+
+/*아래는 메뉴3 생성까지 정상 작동
 import { useState } from 'react'
 import Home from './pages/Home'
 import SensorData from './pages/SensorData'
+import MapPage from './pages/MapPage'
 
 const navItems = ['대시보드', '센서 데이터', '지도', 'MRV']
 
@@ -65,6 +68,7 @@ export default function App() {
     switch (currentPage) {
       case '대시보드': return <Home />
       case '센서 데이터': return <SensorData />
+      case '지도': return <MapPage />
       default: return <Home />
     }
   }
