@@ -5,8 +5,8 @@ import AlarmSummaryCard from '../components/dashboard/AlarmSummaryCard'
 import MrvSummaryCard from '../components/dashboard/MrvSummaryCard'
 
 const mockAlerts = [
-  { id: 1, fieldName: '1번 논', nodeId: 1, alertType: 'LOW_WATER' as const, message: '수위 낮음', createdAt: '2026-03-23 10:00' },
-  { id: 2, fieldName: '2번 논', nodeId: 2, alertType: 'HIGH_WATER' as const, message: '수위 높음', createdAt: '2026-03-23 09:40' },
+  { id: 1, node_id: 1, alert_type: 'LOW_WATER' as const, message: '수위 낮음', created_at: '2026-03-23T10:00:00' },
+  { id: 2, node_id: 2, alert_type: 'HIGH_WATER' as const, message: '수위 높음', created_at: '2026-03-23T09:40:00' },
 ]
 
 const mockMrvReport = {

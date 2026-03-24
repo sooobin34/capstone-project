@@ -1,3 +1,175 @@
+/*import { useState, useEffect } from 'react'
+import SensorChart from '../components/sensor/SensorChart'
+import SensorStats from '../components/sensor/SensorStats'
+import { getFields, getNodes, getSensorLogs, Field, Node, SensorLog } from '../api/dashboard'
+
+const timeRanges = ['1시간', '1일', '1주', '1개월']
+
+export default function SensorData() {
+  const [fields, setFields] = useState<Field[]>([])
+  const [nodes, setNodes] = useState<Node[]>([])
+  const [logs, setLogs] = useState<SensorLog[]>([])
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
+  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
+  const [selectedTime, setSelectedTime] = useState('1일')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetchFields()
+  }, [])
+
+  useEffect(() => {
+    if (selectedFieldId) {
+      setSelectedNodeId(null)
+      setLogs([])
+      fetchNodes(selectedFieldId)
+    }
+  }, [selectedFieldId])
+
+  useEffect(() => {
+    if (nodes.length > 0) {
+      if (selectedNodeId) {
+        fetchLogs(selectedNodeId)
+      } else {
+        nodes.forEach((n) => fetchLogs(n.id))
+      }
+    }
+  }, [selectedNodeId, nodes])
+
+  const fetchFields = async () => {
+    try {
+      const data = await getFields()
+      setFields(data)
+    } catch (e) {
+      console.error('논 조회 실패', e)
+    }
+  }
+
+  const fetchNodes = async (fieldId: number) => {
+    try {
+      const data = await getNodes(fieldId)
+      setNodes(data)
+    } catch (e) {
+      console.error('기기 조회 실패', e)
+    }
+  }
+
+  const fetchLogs = async (nodeId: number) => {
+    try {
+      setLoading(true)
+      const data = await getSensorLogs(nodeId)
+      setLogs((prev) => {
+        const filtered = prev.filter((l) => l.node_id !== nodeId)
+        return [...filtered, ...data]
+      })
+    } catch (e) {
+      console.error('센서 로그 조회 실패', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const singleMode = selectedNodeId !== null
+
+  const getNodeLogs = (nodeId: number) =>
+    logs.filter((l) => l.node_id === nodeId).map((l) => l.inner_level)
+
+  const getLabels = (nodeId: number) =>
+    logs.filter((l) => l.node_id === nodeId).map((l) =>
+      new Date(l.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    )
+
+  const displayNodes = singleMode ? nodes.filter((n) => n.id === selectedNodeId) : nodes
+
+  const datasets = displayNodes.map((node) => ({
+    nodeId: node.id,
+    label: `Node ${node.id}`,
+    data: getNodeLogs(node.id),
+  }))
+
+  const labels = displayNodes.length > 0 ? getLabels(displayNodes[0].id) : []
+
+  const currentLog = logs.filter((l) => l.node_id === (selectedNodeId ?? nodes[0]?.id)).slice(-1)[0]
+  const nodeLogs = logs.filter((l) => l.node_id === (selectedNodeId ?? nodes[0]?.id)).map((l) => l.inner_level)
+  const avg = nodeLogs.length > 0 ? parseFloat((nodeLogs.reduce((a, b) => a + b, 0) / nodeLogs.length).toFixed(1)) : 0
+  const max = nodeLogs.length > 0 ? Math.max(...nodeLogs) : 0
+  const min = nodeLogs.length > 0 ? Math.min(...nodeLogs) : 0
+
+  return (
+    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
+      <h2 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '20px' }}>센서 데이터</h2>
+
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <select
+          value={selectedFieldId ?? ''}
+          onChange={(e) => setSelectedFieldId(e.target.value ? Number(e.target.value) : null)}
+          style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer' }}
+        >
+          <option value="">논 선택</option>
+          {fields.map((f) => <option key={f.id} value={f.id}>{f.field_name}</option>)}
+        </select>
+
+        <select
+          value={selectedNodeId ?? ''}
+          onChange={(e) => setSelectedNodeId(e.target.value ? Number(e.target.value) : null)}
+          disabled={!selectedFieldId}
+          style={{
+            fontSize: '13px', padding: '7px 12px', borderRadius: '8px',
+            border: '0.5px solid #ccc', background: 'white',
+            cursor: selectedFieldId ? 'pointer' : 'not-allowed',
+            opacity: selectedFieldId ? 1 : 0.5,
+          }}
+        >
+          <option value="">전체 기기</option>
+          {nodes.map((n) => <option key={n.id} value={n.id}>Node {n.id}</option>)}
+        </select>
+
+        <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+          {timeRanges.map((t) => (
+            <button
+              key={t}
+              onClick={() => setSelectedTime(t)}
+              style={{
+                fontSize: '12px', padding: '5px 12px', borderRadius: '20px',
+                border: '0.5px solid #ccc', cursor: 'pointer',
+                background: selectedTime === t ? '#1D9E75' : 'white',
+                color: selectedTime === t ? 'white' : '#888',
+                fontWeight: selectedTime === t ? 500 : 400,
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!selectedFieldId ? (
+        <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px', background: 'white', borderRadius: '12px', border: '0.5px solid #e0e0e0' }}>
+          논을 선택하면 수위 데이터가 표시됩니다
+        </div>
+      ) : loading ? (
+        <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px', background: 'white', borderRadius: '12px', border: '0.5px solid #e0e0e0' }}>
+          불러오는 중...
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: singleMode ? '1fr 260px' : '1fr', gap: '12px' }}>
+          <SensorChart datasets={datasets} labels={labels} singleMode={singleMode} />
+          {singleMode && currentLog && (
+            <SensorStats
+              currentLevel={currentLog.inner_level}
+              sensorStatus="정상"
+              avg={avg}
+              max={max}
+              min={min}
+              alarmCount={0}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}*/
+// 아래는 지도api연결까진 정상작동
 import { useState } from 'react'
 import SensorChart from '../components/sensor/SensorChart'
 import SensorStats from '../components/sensor/SensorStats'
@@ -110,3 +282,4 @@ export default function SensorData() {
     </div>
   )
 }
+  

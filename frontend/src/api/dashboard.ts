@@ -30,8 +30,8 @@ export interface Alert {
 export interface SensorLog {
   id: number
   node_id: number
-  inner_level: number
-  outer_level: number
+  inner_water_level: number
+  outer_water_level: number
   created_at: string
 }
 
@@ -78,6 +78,16 @@ export const getMrvReports = async (fieldId?: number) => {
 export const getDashboard = async () => {
   const res = await api.get('/dashboard')
   return (res.data as any).data
+}
+
+export const mapWaterStatus = (status: string): '담수' | '습윤' | '건조' | '데이터 없음' => {
+  const statusMap: Record<string, '담수' | '습윤' | '건조' | '데이터 없음'> = {
+    FLOODED: '담수',
+    DRYING: '습윤',
+    DRY: '건조',
+    NO_DATA: '데이터 없음',
+  }
+  return statusMap[status] ?? '데이터 없음'
 }
 
 /*아래는 api 연결 전까지 코드
