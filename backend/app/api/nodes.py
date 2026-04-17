@@ -78,7 +78,9 @@ def get_node_status(node_id: int, db: Session = Depends(get_db)):
     if latest_log:
         inner_level = float(latest_log.inner_water_level)
 
-        if inner_level >= 0:
+        if inner_level >= 5:
+            current_status = "OVERFLOODED"
+        elif inner_level >= 0:
             current_status = "FLOODED"
         elif inner_level > -15:
             current_status = "DRYING"

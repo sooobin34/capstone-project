@@ -7,8 +7,8 @@ KST = timezone(timedelta(hours=9))
 
 BASE_URL = "https://capstone-project-54l6.onrender.com"
 ENDPOINT = f"{BASE_URL}/sensor-logs"
-SEND_INTERVAL_SECONDS = 600  # 데이터 보내는 주기(10분)
-NODE_IDS = [1]
+SEND_INTERVAL_SECONDS = 5  # 데이터 보내는 주기(10분)
+NODE_IDS = [1, 2, 3]
 
 
 def generate_mock_payload(node_id: int):

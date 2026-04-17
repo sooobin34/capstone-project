@@ -16,7 +16,9 @@ router = APIRouter(prefix="/daily-summaries", tags=["Daily Summaries"])
 
 
 def determine_daily_status(avg_inner_level: Decimal) -> str:
-    if avg_inner_level >= Decimal("0"):
+    if avg_inner_level >= Decimal("5"):
+        return "OVERFLOODED"
+    elif avg_inner_level >= Decimal("0"):
         return "FLOODED"
     elif avg_inner_level > Decimal("-15"):
         return "DRYING"

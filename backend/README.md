@@ -228,11 +228,11 @@ backend
 - HIGH_WATER: inner_water_level >= 5
 
 ### 일일 상태 판정 기준
+※ 수위 기준(-15cm, +5cm)을 기반으로 일일 상태를 4단계로 세분화하여 분석 정확도를 향상시킴
 
-- avg_inner_level >= 0 → FLOODED
-
+- avg_inner_level >= 5 → OVERFLOODED
+- 0 <= avg_inner_level < 5 → FLOODED
 - -15 < avg_inner_level < 0 → DRYING
-
 - avg_inner_level <= -15 → DRY
 
 ### MRV 계산식
