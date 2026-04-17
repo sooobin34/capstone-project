@@ -23,12 +23,8 @@ app = FastAPI(title="AWD Backend Server")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
         "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        # 나중에 프론트 배포 주소 생기면 여기에 추가
-        # "https://프론트주소.onrender.com",
+        "https://capstone-project-theta-amber.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],

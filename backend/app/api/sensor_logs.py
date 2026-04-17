@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -110,6 +111,50 @@ def get_sensor_logs_by_node(
     )
 
     return success_response(logs, "센서 로그 조회 성공")
+
+
+@router.get("/node/{node_id}/stats")
+def get_sensor_log_stats(
+    node_id: int,
+    hours: int = Query(24, ge=1, le=168),
+    db: Session = Depends(get_db)
+):
+    node = db.query(IotNode).filter(IotNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
+
+    since_datetime = datetime.now() - timedelta(hours=hours)
+
+    stats = (
+        db.query(
+            func.avg(SensorLog.inner_water_level).label("avg_inner_water_level"),
+            func.max(SensorLog.inner_water_level).label("max_inner_water_level"),
+            func.min(SensorLog.inner_water_level).label("min_inner_water_level"),
+            func.avg(SensorLog.outer_water_level).label("avg_outer_water_level"),
+            func.max(SensorLog.outer_water_level).label("max_outer_water_level"),
+            func.min(SensorLog.outer_water_level).label("min_outer_water_level"),
+            func.count(SensorLog.id).label("log_count"),
+        )
+        .filter(
+            SensorLog.node_id == node_id,
+            SensorLog.measured_at >= since_datetime
+        )
+        .first()
+    )
+
+    data = {
+        "node_id": node_id,
+        "hours": hours,
+        "avg_inner_water_level": float(stats.avg_inner_water_level) if stats.avg_inner_water_level is not None else None,
+        "max_inner_water_level": float(stats.max_inner_water_level) if stats.max_inner_water_level is not None else None,
+        "min_inner_water_level": float(stats.min_inner_water_level) if stats.min_inner_water_level is not None else None,
+        "avg_outer_water_level": float(stats.avg_outer_water_level) if stats.avg_outer_water_level is not None else None,
+        "max_outer_water_level": float(stats.max_outer_water_level) if stats.max_outer_water_level is not None else None,
+        "min_outer_water_level": float(stats.min_outer_water_level) if stats.min_outer_water_level is not None else None,
+        "log_count": int(stats.log_count or 0),
+    }
+
+    return success_response(data, "24시간 수위 통계 조회 성공")
 
 
 @router.get("/latest/{node_id}")
