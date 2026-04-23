@@ -26,6 +26,8 @@ from app.schemas.mrv_report import (
 from app.utils.response import success_response
 from collections import Counter, defaultdict
 from math import ceil
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
 
 router = APIRouter(prefix="/mrv-reports", tags=["MRV Reports"])
 
@@ -33,8 +35,10 @@ ALLOWED_MRV_STATUSES = {"IN_PROGRESS", "COMPLETED"}
 
 def register_korean_font():
     """
-    Windows 우선: 맑은 고딕 사용
-    없으면 프로젝트 내 fonts/NanumGothic.ttf 사용
+    우선순위
+    1. Windows 로컬 테스트용 맑은 고딕
+    2. 프로젝트 내부 backend/fonts/NanumGothic.ttf
+    3. ReportLab 내장 CID 폰트 (배포 서버 fallback)
     """
     candidate_paths = [
         r"C:\Windows\Fonts\malgun.ttf",
@@ -47,9 +51,17 @@ def register_korean_font():
             pdfmetrics.registerFont(TTFont("KoreanFont", normalized))
             return "KoreanFont"
 
-    raise RuntimeError("사용 가능한 한글 폰트를 찾지 못했습니다. malgun.ttf 또는 NanumGothic.ttf 경로를 확인하세요.")
-
-
+    # Render / Linux fallback
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont("HYSMyeongJo-Medium"))
+        return "HYSMyeongJo-Medium"
+    except Exception:
+        raise RuntimeError(
+            "사용 가능한 한글 폰트를 찾지 못했습니다. "
+            "backend/fonts/NanumGothic.ttf 파일을 추가하거나 폰트 설정을 확인하세요."
+        )
+    
+    
 def get_month_range(report_month: str) -> tuple[date, date]:
     year, month = map(int, report_month.split("-"))
 
