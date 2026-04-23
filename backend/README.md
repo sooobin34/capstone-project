@@ -29,6 +29,7 @@
 - MRV 상태 관리 (작성중 / 완료)
 - MRV 검증(V) 데이터 관리
 - MRV PDF / Excel 다운로드
+- 월간 수위 운영 요약, 검증(V) 데이터, 대표 이미지 URL 기반 보고서 출력 지원
 - 대시보드 통합 데이터 조회
 - Mock Sensor Data 테스트 지원
 
@@ -120,7 +121,7 @@ backend
 - created_at
 
 ### 5) awd_daily_summaries
-→ 일 단위로 수위 평균 및 상태(FLOODED/DRYING/DRY)를 요약한 테이블
+→ 일 단위로 수위 평균 및 상태(OVERFLOODED / FLOODED / DRYING / DRY)를 요약한 테이블
 
 - id
 - node_id
@@ -239,6 +240,12 @@ backend
 
 - carbon_reduction = total_awd_cycles * 15.25
 
+### MRV 집계 기준
+
+- total_awd_cycles: daily_status가 DRY인 일수 기준 집계
+- flood_days: daily_status가 FLOODED 또는 OVERFLOODED인 일수 기준 집계
+
+
 ---
 
 ## 8. 실행 방법
@@ -265,14 +272,24 @@ uvicorn app.main:app --reload
 ```
 
 ### 4) Swagger 접속
+로컬 실행 시:
 ```text
 http://localhost:8000/docs
 ```
-- 로컬 서버 실행 시 접속 가능
+
+Render 배포 서버:
+```text
+https://capstone-project-54l6.onrender.com/docs
+```
 
 ### 5) DB 연결 테스트
+로컬 실행 시:
 ```text
 http://localhost:8000/db-test
+```
+Render 배포 서버:
+```text
+https://capstone-project-54l6.onrender.com/db-test
 ```
 - 데이터베이스 연결 상태 확인용
 
@@ -295,10 +312,31 @@ python mock_sensor_sender.py
 - 테스트용 센서 데이터를 일정 간격으로 자동 전송
 - POST /sensor-logs 엔드포인트로 데이터 저장
 - LOW_WATER / HIGH_WATER 알림 생성 테스트 가능
+- node_id 기준으로 다중 노드(예: 1, 2, 3) 테스트 가능
+
+---
+## 10. MRV 보고서 구조
+
+MRV 보고서는 다음 흐름으로 생성됩니다.
+: 센서 로그 → 일일 요약 → MRV 생성
+
+- MRV는 자동 생성이 아닌 수동 생성 방식
+- POST /mrv-reports 호출 시 생성됨
+- 동일한 월 데이터는 중복 생성 불가
+
+### 포함 내용
+
+- 월간 수위 운영 요약
+- AWD 수행 횟수
+- 담수 유지 일수
+- 탄소감축 추정량
+- 검증(V) 데이터
+- 대표 이미지 URL
 
 ---
 
-## 10. 테스트 완료 항목
+
+## 11. 테스트 완료 항목
 
 ### 1) 기본 API 테스트
 - Swagger API 테스트 완료
@@ -337,21 +375,21 @@ python mock_sensor_sender.py
 
 ---
 
-## 11. 현재 개발 상태
+## 12. 현재 개발 상태
 
 - 백엔드 API 구현 완료
+- Render, Vercel 배포 완료
 - 프론트 연동 진행 중
-- DB 검증(V) 필드 추가 필요
-- Render 배포 예정 (시범 배포: 완료)
+- MRV PDF / Excel 보고서 형식 보강 완료
+- 프론트 센서 데이터 페이지 API 연동 필요
 
 ---
 
-## 12. 참고 사항
+## 13. 참고 사항
 
 - node_id는 초음파 센서 개수가 아니라 IoT 장치 1대 단위입니다.
-
 - 현재 서버 로직은 inner_water_level 기준으로 상태 판정 및 알림을 생성합니다.
-
 - outer_water_level은 현재 보조 데이터로 저장만 하고 있습니다.
-
-- validation 데이터는 추후 정확도 계산에 사용됩니다.
+- verification_image_url은 일일 요약 단위의 검증 이미지 URL 저장에 사용됩니다.
+- MRV 보고서의 validation 데이터는 월간 검증 결과 요약에 사용됩니다.
+- MRV PDF는 대표 검증 이미지 URL을 포함한 보고서형 출력이 가능하도록 구성하였습니다.

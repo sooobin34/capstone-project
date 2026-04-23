@@ -1,3 +1,7 @@
+import os
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
@@ -26,6 +30,24 @@ from math import ceil
 router = APIRouter(prefix="/mrv-reports", tags=["MRV Reports"])
 
 ALLOWED_MRV_STATUSES = {"IN_PROGRESS", "COMPLETED"}
+
+def register_korean_font():
+    """
+    Windows 우선: 맑은 고딕 사용
+    없으면 프로젝트 내 fonts/NanumGothic.ttf 사용
+    """
+    candidate_paths = [
+        r"C:\Windows\Fonts\malgun.ttf",
+        os.path.join(os.path.dirname(__file__), "..", "..", "fonts", "NanumGothic.ttf"),
+    ]
+
+    for path in candidate_paths:
+        normalized = os.path.abspath(path)
+        if os.path.exists(normalized):
+            pdfmetrics.registerFont(TTFont("KoreanFont", normalized))
+            return "KoreanFont"
+
+    raise RuntimeError("사용 가능한 한글 폰트를 찾지 못했습니다. malgun.ttf 또는 NanumGothic.ttf 경로를 확인하세요.")
 
 
 def get_month_range(report_month: str) -> tuple[date, date]:
@@ -109,13 +131,13 @@ def extract_representative_images(summaries: list[AwdDailySummary], max_images: 
     return images
 
 
-def draw_wrapped_text(pdf, text: str, x: int, y: int, max_width: int, line_height: int = 18):
+def draw_wrapped_text(pdf, text: str, x: int, y: int, max_width: int, font_name: str, font_size: int = 11, line_height: int = 18):
     words = text.split()
     line = ""
 
     for word in words:
         test_line = f"{line} {word}".strip()
-        if pdf.stringWidth(test_line, "Helvetica", 11) <= max_width:
+        if pdf.stringWidth(test_line, font_name, font_size) <= max_width:
             line = test_line
         else:
             pdf.drawString(x, y, line)
@@ -294,7 +316,9 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     status_counts = summarize_status_counts(summaries)
     weekly_groups = group_summaries_by_week(summaries)
     representative_images = extract_representative_images(summaries, max_images=3)
-
+    
+    font_name = register_korean_font()
+    
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -308,33 +332,34 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         nonlocal pdf
         if current_y < needed:
             pdf.showPage()
-            pdf.setFont("Helvetica", 11)
+            pdf.setFont(font_name, 11)
             return height - 50
         return current_y
 
     pdf.setTitle(f"mrv_report_{report.id}")
 
     # 1. 제목
-    pdf.setFont("Helvetica-Bold", 16)
+    pdf.setFont(font_name, 16)
     pdf.drawString(left_x, y, "AWD Water Management MRV Report")
     y -= 30
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     y = draw_wrapped_text(
         pdf,
         f"본 보고서는 {field.field_name}의 {report.report_month} 기간 AWD 물관리 수행 이력을 정리한 MRV 보고서이다. "
         f"본 시스템은 IoT 센서를 통해 수위 데이터를 자동 수집하고, 이를 기반으로 논 상태 변화를 기록·관리하도록 설계되었다.",
-        left_x, y, max_text_width
+        left_x, y, max_text_width, font_name=font_name
     )
+
     y -= 10
 
     # 2. 보고서 개요
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "1. 보고서 개요")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     overview_lines = [
         f"대상 논: {field.field_name}",
         f"보고 기간: {report.report_month}",
@@ -350,11 +375,11 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
     # 3. 월간 운영 요약
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "2. 월간 운영 요약")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     summary_lines = [
         f"AWD 수행 횟수: {report.total_awd_cycles}회",
         f"담수 유지 일수: {report.flood_days}일",
@@ -365,7 +390,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         f"DRY: {status_counts['DRY']}일",
     ]
     for line in summary_lines:
-        y = draw_wrapped_text(pdf, line, left_x, y, max_text_width)
+        y = draw_wrapped_text(pdf, line, left_x, y, max_text_width, font_name=font_name)
     y -= 4
 
     y = draw_wrapped_text(
@@ -373,22 +398,22 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         f"보고 기간 동안 AWD 수행 횟수는 {report.total_awd_cycles}회로 집계되었으며, "
         f"담수 상태는 {report.flood_days}일 유지되었다. 수위 데이터는 일일 요약 기준으로 분석되었고, "
         f"논 상태는 OVERFLOODED, FLOODED, DRYING, DRY의 4단계로 구분하였다.",
-        left_x, y, max_text_width
+        left_x, y, max_text_width, font_name=font_name
     )
     y -= 10
 
     # 4. 주차별 수위 변화 요약
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "3. 주차별 수위 변화 요약")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     if weekly_groups:
         for week_no, week_summaries in weekly_groups:
             y = ensure_space(y)
             week_text = make_weekly_summary_text(week_no, week_summaries)
-            y = draw_wrapped_text(pdf, f"- {week_text}", left_x, y, max_text_width)
+            y = draw_wrapped_text(pdf, f"- {week_text}", left_x, y, max_text_width, font_name=font_name)
             y -= 4
     else:
         pdf.drawString(left_x, y, "주차별 요약 데이터가 없습니다.")
@@ -398,11 +423,11 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
     # 5. 검증 결과
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "4. 현장 검증 결과")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     validation_lines = [
         f"검증 방법: {validation['validation_method']}",
         f"샘플 수: {validation['validation_sample_count']}",
@@ -411,7 +436,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         f"비고: {validation['validation_note']}",
     ]
     for line in validation_lines:
-        y = draw_wrapped_text(pdf, line, left_x, y, max_text_width)
+        y = draw_wrapped_text(pdf, line, left_x, y, max_text_width, font_name=font_name)
 
     y -= 4
     y = draw_wrapped_text(
@@ -419,28 +444,28 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         f"검증은 현장 촬영 사진과 센서 기반 상태 판정 결과를 비교하는 방식으로 수행하였다. "
         f"총 {validation['validation_sample_count']}건 중 {validation['validation_match_count']}건이 일치하여 "
         f"정확도는 {validation['validation_accuracy']}%로 나타났다.",
-        left_x, y, max_text_width
+        left_x, y, max_text_width, font_name=font_name
     )
     y -= 10
 
     # 6. 대표 사진 URL
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "5. 대표 검증 이미지")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     if representative_images:
         y = draw_wrapped_text(
             pdf,
             "아래 URL은 해당 월의 일일 요약 데이터에 연결된 대표 검증 이미지이다.",
-            left_x, y, max_text_width
+            left_x, y, max_text_width, font_name=font_name
         )
         y -= 4
 
         for idx, img_url in enumerate(representative_images, start=1):
             y = ensure_space(y)
-            y = draw_wrapped_text(pdf, f"[이미지 {idx}] {img_url}", left_x, y, max_text_width)
+            y = draw_wrapped_text(pdf, f"[이미지 {idx}] {img_url}", left_x, y, max_text_width, font_name=font_name)
             y -= 4
     else:
         pdf.drawString(left_x, y, "연결된 검증 이미지가 없습니다.")
@@ -450,33 +475,33 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
     # 7. 탄소감축 추정 결과
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "6. 탄소감축 추정 결과")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     y = draw_wrapped_text(
         pdf,
         f"AWD 수행 횟수를 기반으로 산출한 탄소감축 추정치는 {report.carbon_reduction} kgCO2-eq이다. "
         f"본 수치는 현장에서 직접 측정된 값이 아니라, AWD 수행 이력과 기존 계수식을 기반으로 계산된 추정치이다.",
-        left_x, y, max_text_width
+        left_x, y, max_text_width, font_name=font_name
     )
     y -= 10
 
     # 8. 결론
     y = ensure_space(y)
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(font_name, 13)
     pdf.drawString(left_x, y, "7. 결론")
     y -= 24
 
-    pdf.setFont("Helvetica", 11)
+    pdf.setFont(font_name, 11)
     y = draw_wrapped_text(
         pdf,
         f"본 시스템은 AWD 농법 수행 과정에서 발생하는 수위 데이터를 자동으로 수집·기록하고, "
         f"이를 일일 요약 및 월별 MRV 보고서 형태로 정리할 수 있음을 확인하였다. "
         f"또한 현장 사진 기반 검증을 통해 센서 데이터의 신뢰성을 보완할 수 있었으며, "
         f"AWD 물관리의 디지털 기록 및 MRV 자동화 가능성을 확인하였다.",
-        left_x, y, max_text_width
+        left_x, y, max_text_width, font_name=font_name
     )
 
     pdf.showPage()
