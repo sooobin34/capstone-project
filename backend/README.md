@@ -48,16 +48,20 @@ backend
  ┃ ┃ ┣ mrv_reports.py
  ┃ ┃ ┣ deps.py
  ┃ ┃ ┣ fields.py
+ ┃ ┃ ┣ validations.py
  ┃ ┃ ┗ dashboard.py
  ┃ ┣ core
  ┃ ┃ ┣ config.py
  ┃ ┃ ┗ database.py
+ ┃ ┣ fonts
+ ┃ ┃ ┗ NanumGothic.ttf
  ┃ ┣ models
  ┃ ┃ ┣ iot_node.py
  ┃ ┃ ┣ sensor_log.py
  ┃ ┃ ┣ alert.py
  ┃ ┃ ┣ awd_daily_summary.py
  ┃ ┃ ┣ field.py
+ ┃ ┃ ┣ validation_record.py
  ┃ ┃ ┗ mrv_report.py
  ┃ ┣ schemas
  ┃ ┃ ┣ iot_node.py
@@ -66,6 +70,7 @@ backend
  ┃ ┃ ┣ awd_daily_summary.py
  ┃ ┃ ┣ dashboard.py
  ┃ ┃ ┣ field.py
+ ┃ ┃ ┣ validation_record.py
  ┃ ┃ ┗ mrv_report.py
  ┃ ┣ utils
  ┃ ┃ ┗ response.py
@@ -131,7 +136,7 @@ backend
 - verification_image_url
 
 ### 6) mrv_reports
-→ 월 단위 AWD 수행 결과 및 탄소 감축량, 검증 데이터를 저장하는 보고서 테이블
+→ 월 단위 AWD 수행 결과 및 탄소 감축량을 저장하는 보고서 테이블
 
 - id
 - field_id
@@ -140,11 +145,23 @@ backend
 - flood_days
 - status
 - carbon_reduction
-- validation_method
-- validation_sample_count
-- validation_match_count
-- validation_accuracy
-- validation_note
+- created_at
+
+※ 검증 결과는 mrv_reports 테이블에 직접 저장하지 않고, validation_records를 조회하여 보고서 생성 시 자동 집계한다.
+
+### 7) validation_records
+→ 현장 촬영 이미지 기반 검증 데이터를 저장하는 테이블
+
+- id
+- field_id
+- node_id
+- record_date
+- image_url
+- image_title
+- sensor_predicted_status
+- observed_surface_status
+- is_match
+- note
 - created_at
 
 ---
@@ -166,6 +183,8 @@ backend
 - GET /sensor-logs/node/{node_id}?start=YYYY-MM-DD&end=YYYY-MM-DD : 기간별 로그 조회
 
 - GET /sensor-logs/node/{node_id}/stats?hours=24 : 24시간 수위 통계 (평균/최대/최소) 조회
+
+- GET /sensor-logs/node/{node_id}/range?period=1h|1d|1w|1m : 그래프용 기간별 로그 조회
 
 
 ### 알림
@@ -202,6 +221,12 @@ backend
 ### 대시보드
 
 - GET /dashboard : 대시보드 요약 조회
+
+### 검증 데이터
+
+- POST /validations : 검증 사진/기록 등록
+- GET /validations : 검증 기록 조회
+- PATCH /validations/{validation_id} : 검증 기록 수정
 
 ---
 
@@ -242,9 +267,19 @@ backend
 
 ### MRV 집계 기준
 
-- total_awd_cycles: daily_status가 DRY인 일수 기준 집계
-- flood_days: daily_status가 FLOODED 또는 OVERFLOODED인 일수 기준 집계
+- 일일 대표 상태는 같은 날짜의 노드별 일일 요약 데이터를 평균하여 산정한다.
+- total_awd_cycles: 일일 대표 상태 기준으로 DRY → FLOODED 전환 횟수
+- flood_days: 일일 대표 상태가 FLOODED 또는 OVERFLOODED인 날짜 수
+- carbon_reduction: total_awd_cycles × 15.25
 
+### 현장 검증(V) 기준
+
+- sensor_predicted_status는 센서 기반 상태값으로 OVERFLOODED / FLOODED / DRYING / DRY 중 하나를 사용한다.
+- observed_surface_status는 현장 사진 기반 표면 상태값으로 WATER_VISIBLE / NO_WATER_VISIBLE / UNKNOWN 중 하나를 사용한다.
+- FLOODED 또는 OVERFLOODED 상태에서 WATER_VISIBLE이면 일치로 판단한다.
+- DRYING 또는 DRY 상태에서 NO_WATER_VISIBLE이면 일치로 판단한다.
+- UNKNOWN은 판별 불가 상태로 사용한다.
+- 사진 검증은 수위 cm를 직접 검증하는 것이 아니라, 표면 담수 여부를 확인하는 보조 검증으로 사용한다.
 
 ---
 
@@ -318,10 +353,12 @@ python mock_sensor_sender.py
 ## 10. MRV 보고서 구조
 
 MRV 보고서는 다음 흐름으로 생성됩니다.
-: 센서 로그 → 일일 요약 → MRV 생성
+센서 로그 → 일일 요약 → 날짜별 대표 상태 집계 → validation_records 월별 집계 → MRV 보고서 생성
 
 - MRV는 자동 생성이 아닌 수동 생성 방식
 - POST /mrv-reports 호출 시 생성됨
+- 생성 요청값은 field_id, report_month만 사용
+- validation 데이터는 validation_records에서 월별로 자동 집계됨
 - 동일한 월 데이터는 중복 생성 불가
 
 ### 포함 내용
@@ -362,11 +399,9 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 
 
 ### 4) MRV 보고서
-- MRV 보고서 생성 테스트 완료
-- MRV 보고서 조회 테스트 완료
-- MRV 상태 변경 테스트 완료
-- MRV PDF 다운로드 테스트 완료
-- MRV Excel 다운로드 테스트 완료
+- MRV 보고서 생성/조회 로직 구현 완료
+- MRV PDF / Excel 다운로드 기능 구현 완료
+- validation_records DB 반영 후 최종 Swagger 테스트 예정
 
 
 ### 5) 대시보드
@@ -377,11 +412,11 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 
 ## 12. 현재 개발 상태
 
-- 백엔드 API 구현 완료
-- Render, Vercel 배포 완료
+- 백엔드 API 구현 진행 중
+- Render 배포 서버 운영 중
+- validation_records 테이블 추가 후 MRV 검증 데이터 연동 예정
 - 프론트 연동 진행 중
 - MRV PDF / Excel 보고서 형식 보강 완료
-- 프론트 센서 데이터 페이지 API 연동 필요
 
 ---
 

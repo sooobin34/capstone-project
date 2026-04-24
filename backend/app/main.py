@@ -9,6 +9,7 @@ from app.api.mrv_reports import router as mrv_reports_router
 from app.api.nodes import router as nodes_router
 from app.api.sensor_logs import router as sensor_logs_router
 from app.api.fields import router as fields_router
+from app.api import validations
 from app.core.database import engine
 
 # 모델 import는 유지해도 되고, 안 써도 됨
@@ -39,6 +40,7 @@ app.include_router(daily_summaries_router)
 app.include_router(mrv_reports_router)
 app.include_router(dashboard_router)
 app.include_router(fields_router)
+app.include_router(validations.router)
 
 @app.get("/")
 def root():

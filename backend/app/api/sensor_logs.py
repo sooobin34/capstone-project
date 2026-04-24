@@ -112,6 +112,50 @@ def get_sensor_logs_by_node(
 
     return success_response(logs, "센서 로그 조회 성공")
 
+@router.get("/node/{node_id}/range")
+def get_sensor_logs_by_period(
+    node_id: int,
+    period: str = Query("1d", pattern="^(1h|1d|1w|1m)$"),
+    db: Session = Depends(get_db)
+):
+    node = db.query(IotNode).filter(IotNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
+
+    now = datetime.now()
+
+    if period == "1h":
+        start_datetime = now - timedelta(hours=1)
+    elif period == "1d":
+        start_datetime = now - timedelta(days=1)
+    elif period == "1w":
+        start_datetime = now - timedelta(weeks=1)
+    elif period == "1m":
+        start_datetime = now - timedelta(days=30)
+    else:
+        raise HTTPException(status_code=400, detail="period는 1h, 1d, 1w, 1m 중 하나여야 합니다.")
+
+    logs = (
+        db.query(SensorLog)
+        .filter(
+            SensorLog.node_id == node_id,
+            SensorLog.measured_at >= start_datetime,
+            SensorLog.measured_at <= now
+        )
+        .order_by(SensorLog.measured_at.asc())
+        .all()
+    )
+
+    data = {
+        "node_id": node_id,
+        "period": period,
+        "start": start_datetime,
+        "end": now,
+        "count": len(logs),
+        "logs": logs,
+    }
+
+    return success_response(data, "기간별 센서 로그 조회 성공")
 
 @router.get("/node/{node_id}/stats")
 def get_sensor_log_stats(

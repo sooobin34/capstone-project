@@ -7,13 +7,6 @@ class MrvReportCreate(BaseModel):
     field_id: int
     report_month: str
 
-    validation_method: str | None = None
-    validation_sample_count: int | None = None
-    validation_match_count: int | None = None
-    validation_accuracy: float | None = None
-    validation_note: str | None = None
-
-
 class MrvReportStatusUpdate(BaseModel):
     status: str
 
@@ -28,6 +21,7 @@ class MrvReportRead(BaseModel):
     status: str
     carbon_reduction: Decimal | None = None
 
+    # 계산값 (DB X)
     validation_method: str | None = None
     validation_sample_count: int | None = None
     validation_match_count: int | None = None
