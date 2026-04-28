@@ -321,6 +321,13 @@ def draw_page_frame(pdf, width, height):
     pdf.line(width - 35, height - 35, width - 35, height - 55)
 
 
+
+def draw_page_number(pdf, width, page_no: int, regular_font: str):
+    """각 페이지 하단 중앙에 쪽수를 표시한다."""
+    pdf.setFont(regular_font, 9)
+    pdf.setFillColor(colors.black)
+    pdf.drawCentredString(width / 2, 28, str(page_no))
+
 def wrap_text(pdf, text: str, max_width: int, font_name: str, font_size: int) -> list[str]:
     if text is None:
         return []
@@ -430,9 +437,19 @@ def draw_simple_table(pdf, x: int, y: int, headers: list[str], rows: list[list[s
     return y - 12
 
 
-def ensure_space_for_validation(pdf, y: int, needed: int, width: int, height: int, regular_font: str) -> int:
+def ensure_space_for_validation(
+    pdf,
+    y: int,
+    needed: int,
+    width: int,
+    height: int,
+    regular_font: str,
+    page_no_ref: list[int],
+) -> int:
     if y < needed:
+        draw_page_number(pdf, width, page_no_ref[0], regular_font)
         pdf.showPage()
+        page_no_ref[0] += 1
         pdf.setFont(regular_font, BODY_SIZE)
         return TOP_Y
     return y
@@ -614,6 +631,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     width, height = A4
     max_text_width = int(width - LEFT_X - RIGHT_MARGIN)
     pdf.setTitle(f"mrv_report_{report.id}")
+    page_no_ref = [1]
 
     # 표지
     draw_page_frame(pdf, width, height)
@@ -649,11 +667,15 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.drawCentredString(width / 2, height - 545, f"작성일: {created_text}")
     pdf.drawCentredString(width / 2, height - 570, "팀명: 강안장인")
 
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
+    page_no_ref[0] += 1
 
     # 목차
     pdf.setFont(bold_font, TOC_TITLE_SIZE)
     pdf.drawCentredString(width / 2, height - 55, "목차")
+
+    section_7_page = "8" if len(validation["representative_rows"]) >= 2 else "7"
 
     toc_items = [
         ("1. 개요 (배경)", "3", 0),
@@ -666,8 +688,8 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         ("6. 검증 결과", "6", 0),
         ("6.1 현장 검증 결과", "6", 1),
         ("6.2 대표 검증 이미지 출력", "6", 1),
-        ("7. 향후 계획", "-", 0),
-        ("8. 결론", "-", 0),
+        ("7. 향후 계획", section_7_page, 0),
+        ("8. 결론", section_7_page, 0),
     ]
 
     y = height - 125
@@ -684,7 +706,9 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         pdf.setDash()
         pdf.drawRightString(width - RIGHT_MARGIN, y, page_no)
         y -= 25
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
+    page_no_ref[0] += 1
 
     # Page 1: 1~3
     y = TOP_Y
@@ -748,7 +772,9 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         f"AWD 수행 기준은 DRY 상태 이후 FLOODED 상태로 전환되는 경우를 1회로 정의하며, 해당 기간 동안 AWD 수행 횟수는 {report.total_awd_cycles}회로 나타났다.",
         LEFT_X, y, max_text_width, regular_font,
     )
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
+    page_no_ref[0] += 1
 
     # Page 2: 4
     y = TOP_Y
@@ -777,7 +803,9 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     else:
         monthly_text = "분석 기간 동안 평균 내부 수위 데이터가 없어 월간 수위 상태 분석이 제한된다."
     y = draw_text(pdf, monthly_text, LEFT_X, y, max_text_width, regular_font, BODY_SIZE, BODY_LINE_HEIGHT)
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
+    page_no_ref[0] += 1
 
     # Page 3: 5
     y = TOP_Y
@@ -815,7 +843,9 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
             "향후에는 주기적인 검증 데이터 확보를 통해 AWD 수행 결과의 신뢰성을 높일 필요가 있다."
         )
     y = draw_text(pdf, insight_text, LEFT_X, y, max_text_width, regular_font)
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
+    page_no_ref[0] += 1
 
     # Page 4+: 6 검증 결과. 사진이 길면 자동 페이지 넘김.
     y = TOP_Y
@@ -857,7 +887,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         )
 
     y -= 18
-    y = ensure_space_for_validation(pdf, y, 190, width, height, regular_font)
+    y = ensure_space_for_validation(pdf, y, 190, width, height, regular_font, page_no_ref)
     y = draw_sub_title(pdf, "6.2 대표 검증 이미지 출력", y, bold_font)
 
     representative_rows = validation["representative_rows"]
@@ -869,7 +899,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         )
         y -= 10
         for label, row in representative_rows:
-            y = ensure_space_for_validation(pdf, y, 250, width, height, regular_font)
+            y = ensure_space_for_validation(pdf, y, 250, width, height, regular_font, page_no_ref)
             pdf.setFont(bold_font, SUB_TITLE_SIZE)
             pdf.drawString(LEFT_X, y, f"[{label}] {row.image_title or '대표 검증 이미지'}")
             y -= 18
@@ -897,7 +927,9 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         )
 
     # 7~8은 검증 결과가 몇 페이지에서 끝나든 항상 새 페이지에서 시작
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
+    page_no_ref[0] += 1
     y = TOP_Y
     y = draw_section_title(pdf, "7. 향후 계획", y, regular_font, bold_font)
     y = draw_bullets(
@@ -928,6 +960,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         )
     y = draw_text(pdf, conclusion, LEFT_X, y, max_text_width, regular_font)
 
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.save()
     buffer.seek(0)
 
@@ -1034,7 +1067,7 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     # 시트1: 보고서형 요약 템플릿
     # -----------------------------
     summary_sheet = workbook.active
-    summary_sheet.title = "MRV 보고서"
+    summary_sheet.title = "요약"
     summary_sheet.sheet_view.showGridLines = False
     set_widths(summary_sheet, {
         "A": 4, "B": 16, "C": 16, "D": 16, "E": 16, "F": 16, "G": 16, "H": 18
@@ -1110,29 +1143,34 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     summary_sheet.row_dimensions[row].height = 55
 
     # -----------------------------
-    # 시트2: 일별 상태 데이터
+    # 시트2: 일별 요약 데이터
+    # daily_summary 원본 데이터를 노드별로 확인하기 위한 시트
     # -----------------------------
-    daily_sheet = workbook.create_sheet(title="일별 상태 데이터")
+    daily_sheet = workbook.create_sheet(title="일별 요약 데이터")
     daily_sheet.sheet_view.showGridLines = False
-    set_widths(daily_sheet, {"A": 16, "B": 18, "C": 18})
-    daily_sheet.merge_cells("A1:C1")
-    daily_sheet["A1"] = "일별 상태 데이터"
+    set_widths(daily_sheet, {"A": 16, "B": 12, "C": 18, "D": 18, "E": 45})
+    daily_sheet.merge_cells("A1:E1")
+    daily_sheet["A1"] = "일별 요약 데이터"
     daily_sheet["A1"].font = title_font
     daily_sheet["A1"].alignment = center
     daily_sheet.row_dimensions[1].height = 30
     daily_sheet.append([])
-    daily_sheet.append(["날짜", "평균 내부 수위(cm)", "일일 상태"])
-    style_range(daily_sheet, "A3:C3", fill=header_fill, font=header_font, alignment=center)
-    for s in daily_summaries:
+    daily_sheet.append(["날짜", "노드 ID", "평균 내부 수위(cm)", "일일 상태", "검증 이미지 URL"])
+    style_range(daily_sheet, "A3:E3", fill=header_fill, font=header_font, alignment=center)
+
+    for s in summaries:
         daily_sheet.append([
             str(s.record_date),
+            s.node_id,
             float(s.avg_inner_level) if s.avg_inner_level is not None else None,
             s.daily_status,
+            s.verification_image_url,
         ])
-    for row_cells in daily_sheet.iter_rows(min_row=4, max_row=daily_sheet.max_row, min_col=1, max_col=3):
+
+    for row_cells in daily_sheet.iter_rows(min_row=4, max_row=daily_sheet.max_row, min_col=1, max_col=5):
         for cell in row_cells:
             cell.font = body_font
-            cell.alignment = center
+            cell.alignment = left if cell.column == 5 else center
             cell.border = border
 
     # -----------------------------
