@@ -1143,35 +1143,123 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     summary_sheet.row_dimensions[row].height = 55
 
     # -----------------------------
-    # 시트2: 일별 요약 데이터
-    # daily_summary 원본 데이터를 노드별로 확인하기 위한 시트
+    # 시트2: 날짜별 흐름 데이터
+    # 한 달 흐름을 날짜별 1행으로 확인하기 위한 시트
     # -----------------------------
-    daily_sheet = workbook.create_sheet(title="일별 요약 데이터")
-    daily_sheet.sheet_view.showGridLines = False
-    set_widths(daily_sheet, {"A": 16, "B": 12, "C": 18, "D": 18, "E": 45})
-    daily_sheet.merge_cells("A1:E1")
-    daily_sheet["A1"] = "일별 요약 데이터"
-    daily_sheet["A1"].font = title_font
-    daily_sheet["A1"].alignment = center
-    daily_sheet.row_dimensions[1].height = 30
-    daily_sheet.append([])
-    daily_sheet.append(["날짜", "노드 ID", "평균 내부 수위(cm)", "일일 상태", "검증 이미지 URL"])
-    style_range(daily_sheet, "A3:E3", fill=header_fill, font=header_font, alignment=center)
-
+    daily_grouped = defaultdict(list)
     for s in summaries:
-        daily_sheet.append([
-            str(s.record_date),
-            s.node_id,
-            float(s.avg_inner_level) if s.avg_inner_level is not None else None,
-            s.daily_status,
-            s.verification_image_url,
-        ])
+        daily_grouped[s.record_date].append(s)
 
-    for row_cells in daily_sheet.iter_rows(min_row=4, max_row=daily_sheet.max_row, min_col=1, max_col=5):
-        for cell in row_cells:
+    representative_by_date = {s.record_date: s for s in daily_summaries}
+    node_ids = [node.id for node in nodes]
+
+    flow_sheet = workbook.create_sheet(title="날짜별 흐름 데이터")
+    flow_sheet.sheet_view.showGridLines = False
+
+    # 기본 열: 날짜, 대표 평균 수위, 대표 상태 + 노드별 수위/상태
+    flow_headers = ["날짜", "대표 평균 수위(cm)", "대표 상태"]
+    for node_id in node_ids:
+        flow_headers.extend([f"노드 {node_id} 수위(cm)", f"노드 {node_id} 상태"])
+
+    flow_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(flow_headers))
+    flow_sheet["A1"] = "날짜별 흐름 데이터"
+    flow_sheet["A1"].font = title_font
+    flow_sheet["A1"].alignment = center
+    flow_sheet.row_dimensions[1].height = 30
+    flow_sheet.append([])
+    flow_sheet.append(flow_headers)
+
+    for col_idx in range(1, len(flow_headers) + 1):
+        cell = flow_sheet.cell(row=3, column=col_idx)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+
+    flow_sheet.column_dimensions["A"].width = 16
+    flow_sheet.column_dimensions["B"].width = 20
+    flow_sheet.column_dimensions["C"].width = 18
+    for col_idx in range(4, len(flow_headers) + 1):
+        flow_sheet.column_dimensions[get_column_letter(col_idx)].width = 18
+
+    current_row = 4
+    for record_date in sorted(daily_grouped.keys()):
+        node_map = {item.node_id: item for item in daily_grouped[record_date]}
+        representative = representative_by_date.get(record_date)
+        row_values = [
+            str(record_date),
+            round(float(representative.avg_inner_level), 2) if representative and representative.avg_inner_level is not None else None,
+            representative.daily_status if representative else None,
+        ]
+        for node_id in node_ids:
+            item = node_map.get(node_id)
+            row_values.extend([
+                round(float(item.avg_inner_level), 2) if item and item.avg_inner_level is not None else None,
+                item.daily_status if item else None,
+            ])
+
+        for col_idx, value in enumerate(row_values, start=1):
+            cell = flow_sheet.cell(row=current_row, column=col_idx, value=value)
             cell.font = body_font
-            cell.alignment = left if cell.column == 5 else center
+            cell.alignment = center
             cell.border = border
+        current_row += 1
+
+    # -----------------------------
+    # 시트3: 노드별 상세 데이터
+    # daily_summary 원본 데이터를 날짜별 묶음으로 확인하기 위한 시트
+    # -----------------------------
+    detail_sheet = workbook.create_sheet(title="노드별 상세 데이터")
+    detail_sheet.sheet_view.showGridLines = False
+    set_widths(detail_sheet, {"A": 16, "B": 12, "C": 18, "D": 18, "E": 45})
+    detail_sheet.merge_cells("A1:E1")
+    detail_sheet["A1"] = "노드별 상세 데이터"
+    detail_sheet["A1"].font = title_font
+    detail_sheet["A1"].alignment = center
+    detail_sheet.row_dimensions[1].height = 30
+    detail_sheet.append([])
+    detail_sheet.append(["날짜", "노드 ID", "평균 내부 수위(cm)", "일일 상태", "검증 이미지 URL"])
+    style_range(detail_sheet, "A3:E3", fill=header_fill, font=header_font, alignment=center)
+
+    thick_side = Side(style="medium", color="404040")
+
+    current_row = 4
+    for record_date in sorted(daily_grouped.keys()):
+        items = sorted(daily_grouped[record_date], key=lambda x: x.node_id)
+        group_start = current_row
+
+        for idx, item in enumerate(items):
+            detail_sheet.cell(row=current_row, column=1, value=str(record_date) if idx == 0 else None)
+            detail_sheet.cell(row=current_row, column=2, value=item.node_id)
+            detail_sheet.cell(
+                row=current_row,
+                column=3,
+                value=round(float(item.avg_inner_level), 2) if item.avg_inner_level is not None else None,
+            )
+            detail_sheet.cell(row=current_row, column=4, value=item.daily_status)
+            detail_sheet.cell(row=current_row, column=5, value=item.verification_image_url)
+            current_row += 1
+
+        group_end = current_row - 1
+
+        if group_end > group_start:
+            detail_sheet.merge_cells(start_row=group_start, start_column=1, end_row=group_end, end_column=1)
+
+        # 날짜 단위 묶음이 눈에 보이도록 첫 행/마지막 행에 굵은 테두리 적용
+        for row_idx in range(group_start, group_end + 1):
+            for col_idx in range(1, 6):
+                cell = detail_sheet.cell(row=row_idx, column=col_idx)
+                cell.font = body_font
+                cell.alignment = left if col_idx == 5 else center
+                cell.border = Border(
+                    left=thin_side,
+                    right=thin_side,
+                    top=thick_side if row_idx == group_start else thin_side,
+                    bottom=thick_side if row_idx == group_end else thin_side,
+                )
+
+        # 날짜별 묶음 사이 간격을 조금 더 주기 위해 행 높이 조정
+        detail_sheet.row_dimensions[group_end].height = 22
 
     # -----------------------------
     # 시트3: 검증 상세
