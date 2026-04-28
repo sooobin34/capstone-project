@@ -9,6 +9,8 @@ from math import ceil
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font as XLFont, PatternFill, Side
+from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session
 
 from reportlab.lib import colors
@@ -46,7 +48,7 @@ PARAGRAPH_GAP = 9
 SECTION_GAP = 18
 LEFT_X = 45
 RIGHT_MARGIN = 45
-TOP_Y = 805
+TOP_Y = 756  # A4 height(약 841) - 85: 본문을 위쪽 여백에서 충분히 내림
 BOTTOM_Y = 55
 
 
@@ -60,8 +62,8 @@ def register_korean_fonts() -> tuple[str, str]:
     Render 서버에서는 Windows 폰트가 없으므로 app/fonts 폴더의 Nanum 폰트를 우선 사용한다.
     """
     regular_candidates = [
-        _font_path("NanumGothic.ttf"),
         _font_path("NanumMyeongjo.ttf"),
+        _font_path("NanumGothic.ttf"),
         r"C:\Windows\Fonts\malgun.ttf",
     ]
     bold_candidates = [
@@ -431,7 +433,6 @@ def draw_simple_table(pdf, x: int, y: int, headers: list[str], rows: list[list[s
 def ensure_space_for_validation(pdf, y: int, needed: int, width: int, height: int, regular_font: str) -> int:
     if y < needed:
         pdf.showPage()
-        draw_page_frame(pdf, width, height)
         pdf.setFont(regular_font, BODY_SIZE)
         return TOP_Y
     return y
@@ -651,7 +652,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
 
     # 목차
-    draw_page_frame(pdf, width, height)
     pdf.setFont(bold_font, TOC_TITLE_SIZE)
     pdf.drawCentredString(width / 2, height - 55, "목차")
 
@@ -687,7 +687,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
 
     # Page 1: 1~3
-    draw_page_frame(pdf, width, height)
     y = TOP_Y
 
     y = draw_section_title(pdf, "1. 개요 (배경)", y, regular_font, bold_font)
@@ -752,7 +751,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
 
     # Page 2: 4
-    draw_page_frame(pdf, width, height)
     y = TOP_Y
     y = draw_section_title(pdf, "4. 결과 분석", y, regular_font, bold_font)
     y = draw_sub_title(pdf, "4.1 주차별 수위 변화 분석", y, bold_font)
@@ -782,7 +780,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
 
     # Page 3: 5
-    draw_page_frame(pdf, width, height)
     y = TOP_Y
     y = draw_section_title(pdf, "5. AWD 수행 및 탄소 감축 분석", y, regular_font, bold_font)
 
@@ -821,7 +818,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
 
     # Page 4+: 6 검증 결과. 사진이 길면 자동 페이지 넘김.
-    draw_page_frame(pdf, width, height)
     y = TOP_Y
     y = draw_section_title(pdf, "6. 검증 결과", y, regular_font, bold_font)
     y = draw_sub_title(pdf, "6.1 현장 검증 결과", y, bold_font)
@@ -902,7 +898,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
     # 7~8은 검증 결과가 몇 페이지에서 끝나든 항상 새 페이지에서 시작
     pdf.showPage()
-    draw_page_frame(pdf, width, height)
     y = TOP_Y
     y = draw_section_title(pdf, "7. 향후 계획", y, regular_font, bold_font)
     y = draw_bullets(
@@ -956,6 +951,7 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
 
     start_date, end_date = get_month_range(report.report_month)
     validation = get_validation_summary(report.field_id, start_date, end_date, db)
+    validation_rows = get_validation_rows(report.field_id, start_date, end_date, db)
 
     summaries = (
         db.query(AwdDailySummary)
@@ -969,53 +965,223 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
         .all()
     )
 
+    nodes = db.query(IotNode).filter(IotNode.field_id == report.field_id).order_by(IotNode.id.asc()).all()
     daily_summaries = aggregate_daily_summaries(summaries)
     status_counts = summarize_status_counts(daily_summaries)
-    representative_images = validation["representative_images"]
+    dominant_status = get_dominant_status(status_counts)
+    month_avg = get_month_avg_inner_level(daily_summaries)
+    report_month_kor = format_report_month(report.report_month)
+    created_text = str(report.created_at.date()) if report.created_at else "-"
 
     workbook = Workbook()
 
-    summary_sheet = workbook.active
-    summary_sheet.title = "MRV Summary"
-    summary_sheet.append(["항목", "값"])
-    summary_sheet.append(["field_name", field.field_name])
-    summary_sheet.append(["report_month", report.report_month])
-    summary_sheet.append(["total_awd_cycles", report.total_awd_cycles])
-    summary_sheet.append(["flood_days", report.flood_days])
-    summary_sheet.append(["overflooded_days", status_counts["OVERFLOODED"]])
-    summary_sheet.append(["flooded_days", status_counts["FLOODED"]])
-    summary_sheet.append(["drying_days", status_counts["DRYING"]])
-    summary_sheet.append(["dry_days", status_counts["DRY"]])
-    summary_sheet.append(["carbon_reduction_kgco2eq", float(report.carbon_reduction) if report.carbon_reduction is not None else None])
-    summary_sheet.append(["status", report.status])
-    summary_sheet.append(["created_at", str(report.created_at)])
+    # 공통 Excel 스타일
+    title_font = XLFont(name="맑은 고딕", size=16, bold=True)
+    section_font = XLFont(name="맑은 고딕", size=12, bold=True)
+    header_font = XLFont(name="맑은 고딕", size=10, bold=True)
+    body_font = XLFont(name="맑은 고딕", size=10)
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    thin_side = Side(style="thin", color="808080")
+    border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    header_fill = PatternFill("solid", fgColor="D9E2F3")
+    section_fill = PatternFill("solid", fgColor="EAF1F8")
+    note_fill = PatternFill("solid", fgColor="F7F7F7")
 
-    daily_sheet = workbook.create_sheet(title="Daily Data")
-    daily_sheet.append(["date", "avg_inner_level", "status"])
+    def set_widths(sheet, widths: dict[str, float]):
+        for col, width in widths.items():
+            sheet.column_dimensions[col].width = width
+
+    def style_range(sheet, cell_range: str, fill=None, font=None, alignment=None, border_style=True):
+        for row in sheet[cell_range]:
+            for cell in row:
+                if fill:
+                    cell.fill = fill
+                if font:
+                    cell.font = font
+                if alignment:
+                    cell.alignment = alignment
+                if border_style:
+                    cell.border = border
+
+    def put_section_title(sheet, row: int, title: str, last_col: str = "H") -> int:
+        sheet.merge_cells(f"A{row}:{last_col}{row}")
+        cell = sheet[f"A{row}"]
+        cell.value = title
+        cell.font = section_font
+        cell.fill = section_fill
+        cell.alignment = left
+        style_range(sheet, f"A{row}:{last_col}{row}", fill=section_fill, font=section_font, alignment=left)
+        sheet.row_dimensions[row].height = 24
+        return row + 1
+
+    def put_kv(sheet, row: int, key: str, value, key_range: str, value_range: str) -> int:
+        sheet.merge_cells(key_range.format(row=row))
+        sheet.merge_cells(value_range.format(row=row))
+        key_cell = sheet[f"A{row}"]
+        value_col = value_range.split("{")[0].split(":")[-1].rstrip("0123456789") or "C"
+        # value_range는 보통 C{row}:H{row} 형태이므로 시작 열을 직접 계산
+        value_cell_ref = value_range.format(row=row).split(":")[0]
+        value_cell = sheet[value_cell_ref]
+        key_cell.value = key
+        value_cell.value = value
+        style_range(sheet, key_range.format(row=row), fill=header_fill, font=header_font, alignment=center)
+        style_range(sheet, value_range.format(row=row), font=body_font, alignment=left)
+        sheet.row_dimensions[row].height = 22
+        return row + 1
+
+    # -----------------------------
+    # 시트1: 보고서형 요약 템플릿
+    # -----------------------------
+    summary_sheet = workbook.active
+    summary_sheet.title = "MRV 보고서"
+    summary_sheet.sheet_view.showGridLines = False
+    set_widths(summary_sheet, {
+        "A": 4, "B": 16, "C": 16, "D": 16, "E": 16, "F": 16, "G": 16, "H": 18
+    })
+
+    summary_sheet.merge_cells("A1:H1")
+    summary_sheet["A1"] = "AWD Water Management MRV Report"
+    summary_sheet["A1"].font = title_font
+    summary_sheet["A1"].alignment = center
+    summary_sheet.row_dimensions[1].height = 32
+
+    summary_sheet.merge_cells("A2:H2")
+    summary_sheet["A2"] = f"{field.field_name} / {report_month_kor} MRV 보고서"
+    summary_sheet["A2"].font = XLFont(name="맑은 고딕", size=11, bold=True)
+    summary_sheet["A2"].alignment = center
+    summary_sheet.row_dimensions[2].height = 24
+
+    row = 4
+    row = put_section_title(summary_sheet, row, "1. 분석 대상 및 기간")
+    row = put_kv(summary_sheet, row, "대상 논", field.field_name, "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "분석 기간", report_month_kor, "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "사용 노드 수", f"{len(nodes)}개", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "보고서 생성일", created_text, "A{row}:B{row}", "C{row}:H{row}")
+
+    row += 1
+    row = put_section_title(summary_sheet, row, "2. 결과 요약")
+    summary_sheet.merge_cells(f"A{row}:D{row}")
+    summary_sheet.merge_cells(f"E{row}:H{row}")
+    summary_sheet[f"A{row}"] = "상태"
+    summary_sheet[f"E{row}"] = "일수"
+    style_range(summary_sheet, f"A{row}:H{row}", fill=header_fill, font=header_font, alignment=center)
+    row += 1
+    for status, days in [
+        ("OVERFLOODED", status_counts["OVERFLOODED"]),
+        ("FLOODED", status_counts["FLOODED"]),
+        ("DRYING", status_counts["DRYING"]),
+        ("DRY", status_counts["DRY"]),
+    ]:
+        summary_sheet.merge_cells(f"A{row}:D{row}")
+        summary_sheet.merge_cells(f"E{row}:H{row}")
+        summary_sheet[f"A{row}"] = status
+        summary_sheet[f"E{row}"] = f"{days}일"
+        style_range(summary_sheet, f"A{row}:H{row}", font=body_font, alignment=center)
+        row += 1
+
+    row += 1
+    row = put_section_title(summary_sheet, row, "3. AWD 수행 및 탄소 감축 분석")
+    row = put_kv(summary_sheet, row, "AWD 수행 기준", "DRY 상태 이후 FLOODED 상태로 전환되는 경우를 1회로 정의", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "AWD 수행 횟수", f"{report.total_awd_cycles}회", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "탄소 감축 산식", "AWD 수행 횟수 × 15.25 (kgCO2-eq)", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "탄소 감축량", f"{report.carbon_reduction} kgCO2-eq", "A{row}:B{row}", "C{row}:H{row}")
+
+    row += 1
+    row = put_section_title(summary_sheet, row, "4. 검증 결과")
+    row = put_kv(summary_sheet, row, "검증 방법", validation["validation_method"], "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "샘플 수", f"{validation['validation_sample_count']}건", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "일치 / 불일치", f"{validation['validation_match_count']}건 / {validation['validation_mismatch_count']}건", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "검증 정확도", f"{validation['validation_accuracy']}%", "A{row}:B{row}", "C{row}:H{row}")
+
+    row += 1
+    row = put_section_title(summary_sheet, row, "5. 결론 및 향후 계획")
+    conclusion = (
+        f"분석 기간 동안 주요 상태는 {dominant_status}로 확인되었으며, "
+        f"AWD 수행 횟수는 {report.total_awd_cycles}회, 탄소 감축량은 {report.carbon_reduction} kgCO2-eq로 산정되었다."
+    )
+    if report.total_awd_cycles == 0:
+        plan = "향후 DRY 상태 이후 적절한 시점의 계획적 재관개와 현장 검증 데이터 확보가 필요하다."
+    else:
+        plan = "향후 검증 데이터 확대와 주기적 수위 관리 기준 보완을 통해 MRV 신뢰도를 높일 필요가 있다."
+    summary_sheet.merge_cells(f"A{row}:H{row + 2}")
+    summary_sheet[f"A{row}"] = f"{conclusion}\n{plan}"
+    style_range(summary_sheet, f"A{row}:H{row + 2}", fill=note_fill, font=body_font, alignment=left)
+    summary_sheet.row_dimensions[row].height = 55
+
+    # -----------------------------
+    # 시트2: 일별 상태 데이터
+    # -----------------------------
+    daily_sheet = workbook.create_sheet(title="일별 상태 데이터")
+    daily_sheet.sheet_view.showGridLines = False
+    set_widths(daily_sheet, {"A": 16, "B": 18, "C": 18})
+    daily_sheet.merge_cells("A1:C1")
+    daily_sheet["A1"] = "일별 상태 데이터"
+    daily_sheet["A1"].font = title_font
+    daily_sheet["A1"].alignment = center
+    daily_sheet.row_dimensions[1].height = 30
+    daily_sheet.append([])
+    daily_sheet.append(["날짜", "평균 내부 수위(cm)", "일일 상태"])
+    style_range(daily_sheet, "A3:C3", fill=header_fill, font=header_font, alignment=center)
     for s in daily_summaries:
         daily_sheet.append([
             str(s.record_date),
             float(s.avg_inner_level) if s.avg_inner_level is not None else None,
             s.daily_status,
         ])
+    for row_cells in daily_sheet.iter_rows(min_row=4, max_row=daily_sheet.max_row, min_col=1, max_col=3):
+        for cell in row_cells:
+            cell.font = body_font
+            cell.alignment = center
+            cell.border = border
 
-    validation_sheet = workbook.create_sheet(title="Validation")
-    validation_sheet.append(["항목", "값"])
-    validation_sheet.append(["validation_method", validation["validation_method"]])
-    validation_sheet.append(["validation_sample_count", validation["validation_sample_count"]])
-    validation_sheet.append(["validation_match_count", validation["validation_match_count"]])
-    validation_sheet.append(["validation_mismatch_count", validation["validation_mismatch_count"]])
-    validation_sheet.append(["validation_unknown_count", validation["validation_unknown_count"]])
-    validation_sheet.append(["validation_accuracy", validation["validation_accuracy"]])
-    validation_sheet.append(["validation_note", validation["validation_note"]])
+    # -----------------------------
+    # 시트3: 검증 상세
+    # -----------------------------
+    validation_sheet = workbook.create_sheet(title="검증 상세")
+    validation_sheet.sheet_view.showGridLines = False
+    set_widths(validation_sheet, {"A": 14, "B": 18, "C": 20, "D": 20, "E": 14, "F": 45, "G": 30})
+    validation_sheet.merge_cells("A1:G1")
+    validation_sheet["A1"] = "검증 상세"
+    validation_sheet["A1"].font = title_font
+    validation_sheet["A1"].alignment = center
+    validation_sheet.row_dimensions[1].height = 30
+    validation_sheet.append([])
+    validation_sheet.append(["날짜", "노드 ID", "센서 상태", "관찰 상태", "일치 여부", "이미지 URL", "비고"])
+    style_range(validation_sheet, "A3:G3", fill=header_fill, font=header_font, alignment=center)
 
-    image_sheet = workbook.create_sheet(title="Validation Images")
-    image_sheet.append(["image_no", "image_url"])
-    if representative_images:
-        for idx, img_url in enumerate(representative_images, start=1):
-            image_sheet.append([idx, img_url])
+    if validation_rows:
+        for row_data in validation_rows:
+            if row_data.is_match is True:
+                match_text = "일치"
+            elif row_data.is_match is False:
+                match_text = "불일치"
+            else:
+                match_text = "판별 불가"
+            validation_sheet.append([
+                str(row_data.record_date),
+                row_data.node_id,
+                row_data.sensor_predicted_status,
+                row_data.observed_surface_status,
+                match_text,
+                row_data.image_url,
+                row_data.note,
+            ])
     else:
-        image_sheet.append([1, "이미지 없음"])
+        validation_sheet.append(["검증 데이터 없음", "", "", "", "", "", ""])
+
+    for row_cells in validation_sheet.iter_rows(min_row=4, max_row=validation_sheet.max_row, min_col=1, max_col=7):
+        for cell in row_cells:
+            cell.font = body_font
+            cell.alignment = left if cell.column in (6, 7) else center
+            cell.border = border
+
+    for sheet in workbook.worksheets:
+        sheet.freeze_panes = "A4"
+        for row_cells in sheet.iter_rows():
+            for cell in row_cells:
+                if cell.value is not None and not cell.font:
+                    cell.font = body_font
 
     buffer = BytesIO()
     workbook.save(buffer)
