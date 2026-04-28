@@ -135,7 +135,7 @@ backend
 - record_date
 - daily_status
 - avg_inner_level
-- verification_image_url
+- verification_image_url: 일일 단위 대표 이미지 URL (현재는 보조 정보로 사용되며, 실제 검증은 validation_records 기준으로 수행됨)
 
 ### 6) mrv_reports
 → 월 단위 AWD 수행 결과 및 탄소 감축량을 저장하는 보고서 테이블
@@ -270,9 +270,12 @@ backend
 ### MRV 집계 기준
 
 - 일일 대표 상태는 같은 날짜의 노드별 일일 요약 데이터를 평균하여 산정한다.
-- total_awd_cycles: 일일 대표 상태 기준으로 DRY → FLOODED 전환 횟수
+- total_awd_cycles: 일일 대표 상태 기준으로 DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의한다.
 - flood_days: 일일 대표 상태가 FLOODED 또는 OVERFLOODED인 날짜 수
 - carbon_reduction: total_awd_cycles × 15.25
+
+※ AWD 수행은 단순히 FLOODED 상태로 복귀하는 경우뿐 아니라,
+건조(DRY) 이후 수위가 상승하여 DRYING 이상 상태로 전환되는 모든 경우를 포함한다.
 
 ### 현장 검증(V) 기준
 
@@ -357,6 +360,8 @@ python mock_sensor_sender.py
 MRV 보고서는 다음 흐름으로 생성됩니다.
 센서 로그 → 일일 요약 → 날짜별 대표 상태 집계 → validation_records 월별 집계 → MRV 보고서 생성
 
+※ MRV 보고서는 센서 기반 데이터(daily_summary)와 현장 검증 데이터(validation_records)를 함께 사용하여 생성된다.
+
 - MRV는 자동 생성이 아닌 수동 생성 방식
 - POST /mrv-reports 호출 시 생성됨
 - 생성 요청값은 field_id, report_month만 사용
@@ -371,6 +376,34 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 - 탄소감축 추정량
 - 검증(V) 데이터
 - 대표 이미지 URL
+
+---
+
+### MRV PDF 구성
+
+- 표지: 보고서 제목, 대상 논, 기간, 작성일 정보
+- 목차: 주요 항목 페이지 구성
+- 결과 분석: 주차별 및 월간 수위 변화 분석
+- AWD 수행 및 탄소 감축 분석: 수행 기준, 횟수 및 탄소 감축량 산정
+- 검증 결과: validation_records 기반 검증 결과 및 대표 이미지
+- 향후 계획 및 결론
+
+---
+
+### MRV Excel 구성
+
+- 요약: 월간 결과 요약 (상태별 일수, AWD 횟수, 탄소 감축량)
+- 날짜별 흐름 데이터: 날짜 기준으로 노드별 수위 및 상태를 한 행에서 비교 가능
+- 노드별 상세 데이터: 날짜별 노드 단위 상세 데이터
+- 검증 상세: validation_records 기반 검증 데이터
+
+---
+
+※ 상태 정의
+- OVERFLOODED: 과다 담수 상태
+- FLOODED: 적정 담수 상태
+- DRYING: 건조 진행 상태
+- DRY: 재관개 필요 상태
 
 ---
 
@@ -429,4 +462,4 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 - outer_water_level은 현재 보조 데이터로 저장만 하고 있습니다.
 - verification_image_url은 일일 요약 단위의 검증 이미지 URL 저장에 사용됩니다.
 - MRV 보고서의 validation 데이터는 월간 검증 결과 요약에 사용됩니다.
-- MRV PDF는 대표 검증 이미지 URL을 포함한 보고서형 출력이 가능하도록 구성하였습니다.
+- MRV PDF는 표지, 목차, 결과 분석, AWD 수행 분석, 검증 결과, 향후 계획 등 보고서 구조로 자동 생성됩니다.
