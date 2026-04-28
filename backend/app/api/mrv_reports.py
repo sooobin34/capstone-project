@@ -76,6 +76,28 @@ def get_month_range(report_month: str) -> tuple[date, date]:
 
     return start_date, end_date
 
+def select_representative_images(rows):
+    if not rows:
+        return []
+
+    # 날짜 기준 정렬
+    rows = sorted(rows, key=lambda x: x.record_date)
+
+    n = len(rows)
+
+    indices = [
+        0,
+        n // 2,
+        n - 1
+    ]
+
+    images = []
+    for i in indices:
+        if rows[i].image_url:
+            images.append(rows[i].image_url)
+
+    return list(dict.fromkeys(images))  # 중복 제거
+
 def get_validation_summary(field_id: int, start_date: date, end_date: date, db: Session) -> dict:
     rows = (
         db.query(ValidationRecord)
@@ -108,7 +130,7 @@ def get_validation_summary(field_id: int, start_date: date, end_date: date, db: 
         "validation_match_count": match_count,
         "validation_accuracy": accuracy,
         "validation_note": note,
-        "representative_images": images[:3],
+        "representative_images": select_representative_images(rows),
     }
 
 def summarize_status_counts(summaries: list[AwdDailySummary]) -> dict:
@@ -835,3 +857,23 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+
+@router.delete("")
+def delete_mrv_report(
+    field_id: int,
+    report_month: str,
+    db: Session = Depends(get_db)
+):
+    report = db.query(MrvReport).filter(
+        MrvReport.field_id == field_id,
+        MrvReport.report_month == report_month
+    ).first()
+
+    if not report:
+        raise HTTPException(status_code=404, detail="보고서 없음")
+
+    db.delete(report)
+    db.commit()
+
+    return success_response(None, "MRV 보고서 삭제 성공")

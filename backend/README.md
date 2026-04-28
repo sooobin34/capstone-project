@@ -54,7 +54,9 @@ backend
  ┃ ┃ ┣ config.py
  ┃ ┃ ┗ database.py
  ┃ ┣ fonts
- ┃ ┃ ┗ NanumGothic.ttf
+ ┃ ┃ ┣ NanumGothic.ttf
+ ┃ ┃ ┣ NanumMyeongjo.ttf
+ ┃ ┃ ┗ NanumMyeongjoBold.ttf
  ┃ ┣ models
  ┃ ┃ ┣ iot_node.py
  ┃ ┃ ┣ sensor_log.py
