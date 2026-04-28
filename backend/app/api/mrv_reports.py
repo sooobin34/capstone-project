@@ -241,7 +241,7 @@ def count_awd_cycles(summaries: list[AwdDailySummary]) -> int:
     statuses = [s.daily_status for s in ordered if s.daily_status]
     count = 0
     for prev_status, current_status in zip(statuses, statuses[1:]):
-        if prev_status == "DRY" and current_status == "FLOODED":
+        if prev_status == "DRY" and current_status in ("DRYING", "FLOODED", "OVERFLOODED"):
             count += 1
     return count
 
@@ -769,7 +769,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     y = draw_text(
         pdf,
         f"전체적으로 {dominant_status} 상태가 가장 많이 관측되었으며, 논의 수위는 해당 상태를 중심으로 변화하였다. "
-        f"AWD 수행 기준은 DRY 상태 이후 FLOODED 상태로 전환되는 경우를 1회로 정의하며, 해당 기간 동안 AWD 수행 횟수는 {report.total_awd_cycles}회로 나타났다.",
+        f"AWD 수행 기준은 DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의하며, 해당 기간 동안 AWD 수행 횟수는 {report.total_awd_cycles}회로 나타났다.",
         LEFT_X, y, max_text_width, regular_font,
     )
     draw_page_number(pdf, width, page_no_ref[0], regular_font)
@@ -812,7 +812,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     y = draw_section_title(pdf, "5. AWD 수행 및 탄소 감축 분석", y, regular_font, bold_font)
 
     y = draw_sub_title(pdf, "[AWD 수행 횟수 기준]", y, bold_font)
-    y = draw_text(pdf, "논이 DRY 상태 이후 FLOODED 상태로 전환되는 경우를 1회로 정의한다.", LEFT_X, y, max_text_width, regular_font)
+    y = draw_text(pdf, "논이 DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의한다.", LEFT_X, y, max_text_width, regular_font)
     y = draw_bullets(pdf, [f"{report_month_kor} AWD 수행 횟수: {report.total_awd_cycles}회"], LEFT_X + 8, y - 4, max_text_width, regular_font)
     y -= 14
 
