@@ -616,20 +616,38 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
     # 표지
     draw_page_frame(pdf, width, height)
+
     pdf.setFont(bold_font, COVER_TITLE_SIZE)
     pdf.drawCentredString(width / 2, height - 110, "AWD Water Management MRV Report")
+
     pdf.setLineWidth(1.0)
     pdf.setStrokeColor(colors.black)
     pdf.line(75, height - 135, width - 75, height - 135)
 
+    logo_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "assets", "logo.png")
+    )
+
+    if os.path.exists(logo_path):
+        pdf.drawImage(
+            logo_path,
+            width / 2 - 80,
+            height - 330,
+            width=160,
+            height=160,
+            preserveAspectRatio=True,
+            mask="auto"
+        )
+
     pdf.setFont(bold_font, COVER_SUBTITLE_SIZE)
-    pdf.drawCentredString(width / 2, height - 245, field.field_name)
-    pdf.drawCentredString(width / 2, height - 280, f"{report_month_kor} MRV 보고서")
+    pdf.drawCentredString(width / 2, height - 420, field.field_name)
+    pdf.drawCentredString(width / 2, height - 455, f"{report_month_kor} MRV 보고서")
 
     pdf.setFont(regular_font, COVER_INFO_SIZE)
     created_text = str(report.created_at.date()) if report.created_at else "-"
-    pdf.drawCentredString(width / 2, height - 385, f"작성일: {created_text}")
-    pdf.drawCentredString(width / 2, height - 410, "팀명: 강안장인")
+    pdf.drawCentredString(width / 2, height - 545, f"작성일: {created_text}")
+    pdf.drawCentredString(width / 2, height - 570, "팀명: 강안장인")
+
     pdf.showPage()
 
     # 목차
