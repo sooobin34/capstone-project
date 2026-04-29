@@ -24,7 +24,7 @@ router = APIRouter(prefix="/validation-records", tags=["Validation Records"])
 
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads" / "validation_records"
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-STATUS_VALUES = {"FLOODED", "DRYING", "DRY", "UNCERTAIN"}
+STATUS_VALUES = {"FLOODED", "DRYING", "DRY", "UNKNOWN"}
 
 
 def ensure_field_exists(db: Session, field_id: int):
@@ -42,7 +42,7 @@ def ensure_node_exists(db: Session, node_id: int | None):
 def calculate_match(sensor_status: str | None, observed_status: str | None) -> bool | None:
     if not sensor_status or not observed_status:
         return None
-    if observed_status == "UNCERTAIN":
+    if observed_status == "UNKNOWN":
         return None
     return sensor_status.upper() == observed_status.upper()
 
@@ -300,14 +300,14 @@ def analyze_validation_image(
     prompt = """
 This is a validation image for an AWD rice paddy water-management capstone project.
 Classify the visible paddy surface into exactly one of:
-FLOODED, DRYING, DRY, UNCERTAIN.
+FLOODED, DRYING, DRY, UNKNOWN.
 
 Do not estimate exact centimeter water depth. Use only visual evidence such as
 visible standing water, wet soil, dry soil, reflection, and occlusion.
 
 Return JSON only:
 {
-  "observed_surface_status": "FLOODED | DRYING | DRY | UNCERTAIN",
+  "observed_surface_status": "FLOODED | DRYING | DRY | UNKNOWN",
   "confidence": 0-100,
   "reason": "short evidence",
   "limitations": "angle/reflection/occlusion/weather limitations"

@@ -30,7 +30,7 @@ class ValidationAnalyzeRequest(BaseModel):
 
 
 class ValidationAnalyzeResult(BaseModel):
-    observed_surface_status: str = Field(description="FLOODED, DRYING, DRY, or UNCERTAIN")
+    observed_surface_status: str = Field(description="FLOODED, DRYING, DRY, or UNKNOWN")
     confidence: float
     reason: str
     limitations: str | None = None
