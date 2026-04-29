@@ -7,10 +7,12 @@ fastapi==0.135.1
 greenlet==3.3.2
 h11==0.16.0
 idna==3.11
+openai==2.9.0
 psycopg2-binary==2.9.11
 pydantic==2.12.5
 pydantic_core==2.41.5
 python-dotenv==1.2.2
+python-multipart==0.0.21
 SQLAlchemy==2.0.48
 starlette==0.52.1
 typing-inspection==0.4.2
