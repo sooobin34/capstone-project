@@ -45,9 +45,14 @@ export default function SensorData() {
         getSensorStats(nodeId),
       ])
       setChartData(logs.map((l: any) => l.inner_water_level))
-      setChartLabels(logs.map((l: any) =>
-        new Date(l.measured_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-      ))
+     setChartLabels(logs.map((l: any) => {
+  const date = new Date(l.measured_at)
+  if (period === '1h' || period === '1d') {
+    return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+  } else {
+    return `${date.getMonth() + 1}/${date.getDate()}`
+  }
+}))
       setStats(statsData)
     } catch (e) {
       console.error('센서 데이터 조회 실패', e)

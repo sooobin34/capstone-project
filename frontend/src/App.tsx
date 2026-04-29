@@ -5,21 +5,21 @@ import MapPage from './pages/MapPage'
 import MrvPage from './pages/MrvPage'
 import AlertPage from './pages/AlertPage'
 
-const navItems = ['센서 데이터', '지도', '알람', 'MRV']
+const navItems = ['Sensor Data', 'Map', 'Alerts', 'MRV']
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('대시보드')
 
   const renderPage = () => {
-    switch (currentPage) {
-      case '대시보드': return <Home onNavigate={setCurrentPage} />
-      case '센서 데이터': return <SensorData />
-      case '지도': return <MapPage />
-      case '알람': return <AlertPage />
-      case 'MRV': return <MrvPage />
-      default: return <Home onNavigate={setCurrentPage} />
-    }
+  switch (currentPage) {
+    case '대시보드': return <Home onNavigate={setCurrentPage} />
+    case 'Sensor Data': return <SensorData />
+    case 'Map': return <MapPage />
+    case 'Alerts': return <AlertPage />
+    case 'MRV': return <MrvPage />
+    default: return <Home onNavigate={setCurrentPage} />
   }
+}
 
   return (
     <div style={{ minHeight: '100vh', background: '#fafafa' }}>

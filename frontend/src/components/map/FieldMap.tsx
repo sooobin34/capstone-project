@@ -38,11 +38,16 @@ export default function FieldMap({ sensors, center }: FieldMapProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapUpdater center={center} />
-        {sensors.map((sensor) => (
-          <Marker key={sensor.id} position={[sensor.lat, sensor.lng]}>
-            <Popup>{sensor.name}</Popup>
-          </Marker>
-        ))}
+       {sensors.map((sensor) => (
+       <Marker key={sensor.id} position={[sensor.lat, sensor.lng]}
+        eventHandlers={{
+         mouseover: (e) => e.target.openPopup(),
+         mouseout: (e) => e.target.closePopup(),
+       }}
+  >
+    <Popup>{sensor.name}</Popup>
+  </Marker>
+))}
       </MapContainer>
     </div>
   )

@@ -98,7 +98,7 @@ export default function Home({ onNavigate }: HomeProps) {
           <WaterLevelCard level={latestLevel} status={latestStatus} fieldName={dashboard?.latest_daily_summary ? `Node ${dashboard.latest_daily_summary.node_id}` : '-'} />
           <MapPreview
   fieldCount={dashboard?.total_fields ?? 0}
-  onNavigate={() => onNavigate('지도')}
+  onNavigate={() => onNavigate('Map')}
 />
         </div>
         <TrendChart data={chartData} labels={chartLabels} />
