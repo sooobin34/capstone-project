@@ -21,6 +21,8 @@
 - 기간별 센서 로그 조회
 - 일일 수위 상태 요약 생성
 - 월별 MRV 보고서 생성
+- 사진 기반 검증 기록 저장 및 센서 상태와의 일치율 계산
+- OpenAI Vision API를 활용한 검증 사진 상태 분석
 - 대시보드 요약 데이터 조회
 - Mock Sensor Data 자동 전송 테스트 지원
 
@@ -37,6 +39,7 @@ backend
  ┃ ┃ ┣ alerts.py
  ┃ ┃ ┣ daily_summaries.py
  ┃ ┃ ┣ mrv_reports.py
+ ┃ ┃ ┣ validation_records.py
  ┃ ┃ ┣ deps.py
  ┃ ┃ ┗ dashboard.py
  ┃ ┣ core
@@ -47,14 +50,16 @@ backend
  ┃ ┃ ┣ sensor_log.py
  ┃ ┃ ┣ alert.py
  ┃ ┃ ┣ awd_daily_summary.py
- ┃ ┃ ┗ mrv_report.py
+ ┃ ┃ ┣ mrv_report.py
+ ┃ ┃ ┗ validation_record.py
  ┃ ┣ schemas
  ┃ ┃ ┣ iot_node.py
  ┃ ┃ ┣ sensor_log.py
  ┃ ┃ ┣ alert.py
  ┃ ┃ ┣ awd_daily_summary.py
  ┃ ┃ ┣ dashboard.py
- ┃ ┃ ┗ mrv_report.py
+ ┃ ┃ ┣ mrv_report.py
+ ┃ ┃ ┗ validation_record.py
  ┃ ┣ utils
  ┃ ┃ ┗ response.py
  ┃ ┗ main.py
@@ -110,9 +115,34 @@ backend
 월 단위 AWD 수행 횟수 및 탄소 감축 결과
 
 - id
+- field_id
 - report_month
 - total_awd_cycles
+- flood_days
+- status
 - carbon_reduction
+- validation_method
+- validation_sample_count
+- validation_match_count
+- validation_accuracy
+- validation_note
+- created_at
+
+### 6) validation_records
+현장 사진 기반 검증 이력 데이터입니다.
+센서가 예측한 상태와 사진 관찰 상태를 비교하여 검증 정확도를 계산합니다.
+
+- id
+- field_id
+- node_id
+- record_date
+- captured_at
+- image_url
+- image_title
+- sensor_predicted_status
+- observed_surface_status
+- is_match
+- note
 - created_at
 
 ---
@@ -148,6 +178,24 @@ backend
 - POST /mrv-reports : MRV 보고서 생성
 
 - GET /mrv-reports : MRV 보고서 조회
+
+### 검증 사진
+
+- POST /validation-records : 검증 사진 기록 저장
+
+- POST /validation-records/upload : 검증 사진 파일 업로드 및 기록 저장
+
+- GET /validation-records : 검증 사진 기록 조회
+
+- GET /validation-records/summary : 검증 표본 수, 일치 수, 정확도 조회
+
+- GET /validation-records/{record_id} : 검증 사진 기록 단건 조회
+
+- PATCH /validation-records/{record_id} : 검증 사진 기록 수정
+
+- GET /validation-records/{record_id}/download : 검증 사진 다운로드 또는 URL 이동
+
+- POST /validation-records/{record_id}/analyze : OpenAI Vision 기반 사진 상태 분석
 
 ### 대시보드
 
@@ -190,6 +238,26 @@ backend
 
 - carbon_reduction = total_awd_cycles * 15.25
 
+### 검증 사진 상태 분류 기준
+
+- FLOODED: 물이 차 있는 담수 상태
+
+- DRYING: 물이 빠지는 중이거나 습윤 상태
+
+- DRY: 건조 상태
+
+- UNCERTAIN: 사진만으로 판단하기 어려운 상태
+
+### 검증 정확도 계산식
+
+- validation_accuracy = validation_match_count / validation_sample_count * 100
+
+### OpenAI Vision 분석
+
+- OpenAI 분석은 선택 기능입니다.
+- OPENAI_API_KEY가 없어도 검증 사진 저장, 조회, 업로드, 정확도 계산은 동작합니다.
+- OPENAI_API_KEY가 없을 경우 POST /validation-records/{record_id}/analyze API만 사용할 수 없습니다.
+
 ---
 
 ## 8. 실행 방법
@@ -224,6 +292,16 @@ http://127.0.0.1:8000/docs
 ```text
 http://127.0.0.1:8000/db-test
 ```
+
+### 6) 환경변수
+```text
+DATABASE_URL=PostgreSQL 연결 문자열
+OPENAI_API_KEY=OpenAI API 키
+OPENAI_VISION_MODEL=gpt-4.1-mini
+```
+
+OPENAI_API_KEY는 검증 사진 자동 분석 API를 사용할 때만 필요합니다.
+DATABASE_URL, OPENAI_API_KEY 등 민감정보는 GitHub에 커밋하지 않습니다.
 
 ---
 
@@ -264,6 +342,10 @@ python mock_sensor_sender.py
 
 - MRV 보고서 생성/조회 테스트 완료
 
+- 검증 사진 기록 저장/조회 테스트 완료
+
+- 검증 정확도 조회 테스트 완료
+
 - 대시보드 조회 테스트 완료
 
 ---
@@ -276,6 +358,8 @@ python mock_sensor_sender.py
 - Render 배포 준비
 - Render 시험 배포 및 테스트
 - 프론트엔드 연동
+- 검증 사진 업로드/분류 화면 연동
+- OpenAI Vision API 키 설정 후 사진 자동 분석 테스트
 - README 보완 및 발표 자료 정리
 
 ---
