@@ -9,6 +9,7 @@ from app.models.awd_daily_summary import AwdDailySummary
 from app.models.field import Field
 from app.models.iot_node import IotNode
 from app.models.mrv_report import MrvReport
+from app.models.validation_record import ValidationRecord
 from app.schemas.mrv_report import MrvReportCreate
 from app.utils.response import success_response
 
@@ -62,16 +63,44 @@ def create_mrv_report(payload: MrvReportCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="해당 논의 해당 월 일일 요약 데이터가 없습니다.")
 
     total_awd_cycles = sum(1 for summary in summaries if summary.daily_status == "DRY")
+    flood_days = sum(1 for summary in summaries if summary.daily_status == "FLOODED")
     carbon_reduction = (Decimal(total_awd_cycles) * Decimal("15.25")).quantize(
         Decimal("0.01"),
         rounding=ROUND_HALF_UP
     )
 
+    validation_records = (
+        db.query(ValidationRecord)
+        .filter(
+            ValidationRecord.field_id == payload.field_id,
+            ValidationRecord.record_date >= start_date,
+            ValidationRecord.record_date < end_date,
+            ValidationRecord.is_match.isnot(None)
+        )
+        .all()
+    )
+    validation_sample_count = len(validation_records)
+    validation_match_count = sum(1 for record in validation_records if record.is_match)
+    validation_accuracy = None
+    if validation_sample_count:
+        validation_accuracy = (
+            Decimal(validation_match_count)
+            / Decimal(validation_sample_count)
+            * Decimal("100")
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
     report = MrvReport(
         field_id=payload.field_id,
         report_month=payload.report_month,
         total_awd_cycles=total_awd_cycles,
+        flood_days=flood_days,
+        status="COMPLETED",
         carbon_reduction=carbon_reduction,
+        validation_method="PHOTO",
+        validation_sample_count=validation_sample_count,
+        validation_match_count=validation_match_count,
+        validation_accuracy=validation_accuracy,
+        validation_note="Sensor status and validation photo surface status were cross-checked.",
     )
 
     db.add(report)

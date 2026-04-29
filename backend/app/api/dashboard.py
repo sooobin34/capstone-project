@@ -56,7 +56,12 @@ def get_dashboard(
             "field_id": latest_mrv_report.field_id,
             "report_month": latest_mrv_report.report_month,
             "total_awd_cycles": latest_mrv_report.total_awd_cycles,
+            "flood_days": latest_mrv_report.flood_days,
+            "status": latest_mrv_report.status,
             "carbon_reduction": latest_mrv_report.carbon_reduction,
+            "validation_sample_count": latest_mrv_report.validation_sample_count,
+            "validation_match_count": latest_mrv_report.validation_match_count,
+            "validation_accuracy": latest_mrv_report.validation_accuracy,
             "created_at": latest_mrv_report.created_at,
         } if latest_mrv_report else None
     }

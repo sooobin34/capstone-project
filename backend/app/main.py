@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.api.alerts import router as alerts_router
@@ -9,6 +10,7 @@ from app.api.mrv_reports import router as mrv_reports_router
 from app.api.nodes import router as nodes_router
 from app.api.sensor_logs import router as sensor_logs_router
 from app.api.fields import router as fields_router
+from app.api.validation_records import router as validation_records_router
 from app.core.database import engine
 
 # 모델 import는 유지해도 되고, 안 써도 됨
@@ -17,6 +19,7 @@ from app.models.awd_daily_summary import AwdDailySummary
 from app.models.iot_node import IotNode
 from app.models.mrv_report import MrvReport
 from app.models.sensor_log import SensorLog
+from app.models.validation_record import ValidationRecord
 
 app = FastAPI(title="AWD Backend Server")
 
@@ -27,6 +30,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://capstone-project-theta-amber.vercel.app",
         # 나중에 프론트 배포 주소 생기면 여기에 추가
         # "https://프론트주소.onrender.com",
     ],
@@ -43,6 +47,8 @@ app.include_router(daily_summaries_router)
 app.include_router(mrv_reports_router)
 app.include_router(dashboard_router)
 app.include_router(fields_router)
+app.include_router(validation_records_router)
+app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 
 @app.get("/")
 def root():
