@@ -1,14 +1,17 @@
 interface WaterLevelCardProps {
   level: number
-  status: '담수' | '습윤' | '건조'
+  status: '과담수' | '담수' | '습윤' | '건조중' | '건조' | '데이터 없음'
   fieldName: string
 }
 
 export default function WaterLevelCard({ level, status, fieldName }: WaterLevelCardProps) {
-  const statusColor = {
+  const statusColor: Record<string, string> = {
+    과담수: '#1565c0',
     담수: '#1D9E75',
     습윤: '#BA7517',
+    건조중: '#BA7517',
     건조: '#E24B4A',
+    '데이터 없음': '#aaa',
   }
 
   return (
@@ -29,8 +32,8 @@ export default function WaterLevelCard({ level, status, fieldName }: WaterLevelC
         fontSize: '11px',
         padding: '2px 8px',
         borderRadius: '20px',
-        background: statusColor[status] + '20',
-        color: statusColor[status],
+        background: (statusColor[status] ?? '#aaa') + '20',
+        color: statusColor[status] ?? '#aaa',
         fontWeight: 500,
       }}>{status}</span>
     </div>

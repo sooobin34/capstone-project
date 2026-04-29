@@ -1,4 +1,9 @@
-export default function MapPreview() {
+interface MapPreviewProps {
+  fieldCount: number
+  onNavigate: () => void
+}
+
+export default function MapPreview({ fieldCount, onNavigate }: MapPreviewProps) {
   return (
     <div style={{
       background: 'white',
@@ -21,10 +26,15 @@ export default function MapPreview() {
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#aaa"/>
             <circle cx="12" cy="9" r="2.5" fill="white"/>
           </svg>
-          <span style={{ fontSize: '12px', color: '#888' }}>논 3개 등록됨</span>
+          <span style={{ fontSize: '12px', color: '#888' }}>논 {fieldCount}개 등록됨</span>
         </div>
       </div>
-      <p style={{ fontSize: '12px', color: '#1D9E75', marginTop: '8px', cursor: 'pointer' }}>지도 보기 →</p>
+      <p
+        onClick={onNavigate}
+        style={{ fontSize: '12px', color: '#1D9E75', marginTop: '8px', cursor: 'pointer' }}
+      >
+        지도 보기 →
+      </p>
     </div>
   )
 }

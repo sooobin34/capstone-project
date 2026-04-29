@@ -1,99 +1,65 @@
-/*import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import SensorChart from '../components/sensor/SensorChart'
 import SensorStats from '../components/sensor/SensorStats'
-import { getFields, getNodes, getSensorLogs, Field, Node, SensorLog } from '../api/dashboard'
+import { getFields, getNodes, getSensorLogsRange, getSensorStats, Field, Node } from '../api/dashboard'
 
+const periodMap: Record<string, '1h' | '1d' | '1w' | '1m'> = {
+  '1시간': '1h', '1일': '1d', '1주': '1w', '1개월': '1m',
+}
 const timeRanges = ['1시간', '1일', '1주', '1개월']
 
 export default function SensorData() {
   const [fields, setFields] = useState<Field[]>([])
   const [nodes, setNodes] = useState<Node[]>([])
-  const [logs, setLogs] = useState<SensorLog[]>([])
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
   const [selectedTime, setSelectedTime] = useState('1일')
+  const [chartData, setChartData] = useState<number[]>([])
+  const [chartLabels, setChartLabels] = useState<string[]>([])
+  const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
+  // 논 목록 로드
   useEffect(() => {
-    fetchFields()
+    getFields().then(setFields).catch(console.error)
   }, [])
 
+  // 논 선택 시 노드 목록 로드
   useEffect(() => {
-    if (selectedFieldId) {
-      setSelectedNodeId(null)
-      setLogs([])
-      fetchNodes(selectedFieldId)
-    }
+    if (!selectedFieldId) return
+    setSelectedNodeId(null)
+    getNodes(selectedFieldId).then(setNodes).catch(console.error)
   }, [selectedFieldId])
 
+  // 노드 + 기간 선택 시 그래프 데이터 로드
   useEffect(() => {
-    if (nodes.length > 0) {
-      if (selectedNodeId) {
-        fetchLogs(selectedNodeId)
-      } else {
-        nodes.forEach((n) => fetchLogs(n.id))
-      }
-    }
-  }, [selectedNodeId, nodes])
+    if (!selectedNodeId) return
+    fetchChartData(selectedNodeId, periodMap[selectedTime])
+  }, [selectedNodeId, selectedTime])
 
-  const fetchFields = async () => {
-    try {
-      const data = await getFields()
-      setFields(data)
-    } catch (e) {
-      console.error('논 조회 실패', e)
-    }
-  }
-
-  const fetchNodes = async (fieldId: number) => {
-    try {
-      const data = await getNodes(fieldId)
-      setNodes(data)
-    } catch (e) {
-      console.error('기기 조회 실패', e)
-    }
-  }
-
-  const fetchLogs = async (nodeId: number) => {
+  const fetchChartData = async (nodeId: number, period: '1h' | '1d' | '1w' | '1m') => {
     try {
       setLoading(true)
-      const data = await getSensorLogs(nodeId)
-      setLogs((prev) => {
-        const filtered = prev.filter((l) => l.node_id !== nodeId)
-        return [...filtered, ...data]
-      })
+      const [logs, statsData] = await Promise.all([
+        getSensorLogsRange(nodeId, period),
+        getSensorStats(nodeId),
+      ])
+      setChartData(logs.map((l: any) => l.inner_water_level))
+      setChartLabels(logs.map((l: any) =>
+        new Date(l.measured_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+      ))
+      setStats(statsData)
     } catch (e) {
-      console.error('센서 로그 조회 실패', e)
+      console.error('센서 데이터 조회 실패', e)
     } finally {
       setLoading(false)
     }
   }
 
   const singleMode = selectedNodeId !== null
-
-  const getNodeLogs = (nodeId: number) =>
-    logs.filter((l) => l.node_id === nodeId).map((l) => l.inner_level)
-
-  const getLabels = (nodeId: number) =>
-    logs.filter((l) => l.node_id === nodeId).map((l) =>
-      new Date(l.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-    )
-
-  const displayNodes = singleMode ? nodes.filter((n) => n.id === selectedNodeId) : nodes
-
-  const datasets = displayNodes.map((node) => ({
-    nodeId: node.id,
-    label: `Node ${node.id}`,
-    data: getNodeLogs(node.id),
-  }))
-
-  const labels = displayNodes.length > 0 ? getLabels(displayNodes[0].id) : []
-
-  const currentLog = logs.filter((l) => l.node_id === (selectedNodeId ?? nodes[0]?.id)).slice(-1)[0]
-  const nodeLogs = logs.filter((l) => l.node_id === (selectedNodeId ?? nodes[0]?.id)).map((l) => l.inner_level)
-  const avg = nodeLogs.length > 0 ? parseFloat((nodeLogs.reduce((a, b) => a + b, 0) / nodeLogs.length).toFixed(1)) : 0
-  const max = nodeLogs.length > 0 ? Math.max(...nodeLogs) : 0
-  const min = nodeLogs.length > 0 ? Math.min(...nodeLogs) : 0
+  const datasets = singleMode && chartData.length > 0
+    ? [{ nodeId: selectedNodeId, label: `Node ${selectedNodeId}`, data: chartData }]
+    : []
 
   return (
     <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
@@ -102,7 +68,12 @@ export default function SensorData() {
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={selectedFieldId ?? ''}
-          onChange={(e) => setSelectedFieldId(e.target.value ? Number(e.target.value) : null)}
+          onChange={(e) => {
+            setSelectedFieldId(e.target.value ? Number(e.target.value) : null)
+            setNodes([])
+            setChartData([])
+            setStats(null)
+          }}
           style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer' }}
         >
           <option value="">논 선택</option>
@@ -113,15 +84,10 @@ export default function SensorData() {
           value={selectedNodeId ?? ''}
           onChange={(e) => setSelectedNodeId(e.target.value ? Number(e.target.value) : null)}
           disabled={!selectedFieldId}
-          style={{
-            fontSize: '13px', padding: '7px 12px', borderRadius: '8px',
-            border: '0.5px solid #ccc', background: 'white',
-            cursor: selectedFieldId ? 'pointer' : 'not-allowed',
-            opacity: selectedFieldId ? 1 : 0.5,
-          }}
+          style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: selectedFieldId ? 'pointer' : 'not-allowed', opacity: selectedFieldId ? 1 : 0.5 }}
         >
-          <option value="">전체 기기</option>
-          {nodes.map((n) => <option key={n.id} value={n.id}>Node {n.id}</option>)}
+          <option value="">노드 선택</option>
+          {nodes.map((n) => <option key={n.id} value={n.id}>Node {n.id} · {n.location_desc}</option>)}
         </select>
 
         <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
@@ -147,20 +113,22 @@ export default function SensorData() {
         <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px', background: 'white', borderRadius: '12px', border: '0.5px solid #e0e0e0' }}>
           논을 선택하면 수위 데이터가 표시됩니다
         </div>
-      ) : loading ? (
+      ) : !selectedNodeId ? (
         <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px', background: 'white', borderRadius: '12px', border: '0.5px solid #e0e0e0' }}>
-          불러오는 중...
+          노드를 선택하면 그래프가 표시됩니다
         </div>
+      ) : loading ? (
+        <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px' }}>불러오는 중...</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: singleMode ? '1fr 260px' : '1fr', gap: '12px' }}>
-          <SensorChart datasets={datasets} labels={labels} singleMode={singleMode} />
-          {singleMode && currentLog && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '12px' }}>
+          <SensorChart datasets={datasets} labels={chartLabels} singleMode={singleMode} />
+          {stats && (
             <SensorStats
-              currentLevel={currentLog.inner_level}
+              currentLevel={chartData[chartData.length - 1] ?? 0}
               sensorStatus="정상"
-              avg={avg}
-              max={max}
-              min={min}
+              avg={stats.avg_inner ?? 0}
+              max={stats.max_inner ?? 0}
+              min={stats.min_inner ?? 0}
               alarmCount={0}
             />
           )}
@@ -168,118 +136,4 @@ export default function SensorData() {
       )}
     </div>
   )
-}*/
-// 아래는 지도api연결까진 정상작동
-import { useState } from 'react'
-import SensorChart from '../components/sensor/SensorChart'
-import SensorStats from '../components/sensor/SensorStats'
-
-const mockFields = [
-  { id: 1, name: '1번 논 (전주 A)' },
-  { id: 2, name: '2번 논 (전주 B)' },
-  { id: 3, name: '3번 논 (전주 C)' },
-]
-
-const mockNodes: Record<number, { id: number; label: string }[]> = {
-  1: [{ id: 1, label: 'Node 1' }, { id: 2, label: 'Node 2' }, { id: 3, label: 'Node 3' }],
-  2: [{ id: 4, label: 'Node 4' }, { id: 5, label: 'Node 5' }],
-  3: [{ id: 6, label: 'Node 6' }],
 }
-
-const mockData = [3, 2.8, 2.5, 2.2, 1.8, 1.2, 0.5, -1, -3, -6, -9, -12, -14, -15.2, -14, -11, -7, -4, -1, 1, 2, 2.8, 3.2, 3.2]
-const mockLabels = Array.from({ length: 24 }, (_, i) => `${i}시`)
-
-const timeRanges = ['1시간', '1일', '1주', '1개월']
-
-export default function SensorData() {
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
-  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
-  const [selectedTime, setSelectedTime] = useState('1일')
-
-  const nodes = selectedFieldId ? mockNodes[selectedFieldId] ?? [] : []
-  const singleMode = selectedNodeId !== null
-
-  const datasets = !selectedFieldId
-  ? []
-  : singleMode
-    ? [{ nodeId: selectedNodeId!, label: nodes.find(n => n.id === selectedNodeId)?.label ?? '', data: mockData }]
-    : nodes.length > 0
-      ? nodes.map((node, i) => ({
-          nodeId: node.id,
-          label: node.label,
-          data: mockData.map(v => +(v + i * 0.5).toFixed(1)),
-        }))
-      : []
-
-  return (
-    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
-      <h2 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '20px' }}>센서 데이터</h2>
-
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <select
-          value={selectedFieldId ?? ''}
-          onChange={(e) => {
-            setSelectedFieldId(e.target.value ? Number(e.target.value) : null)
-            setSelectedNodeId(null)
-          }}
-          style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer' }}
-        >
-          <option value="">논 선택</option>
-          {mockFields.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-        </select>
-
-        <select
-          value={selectedNodeId ?? ''}
-          onChange={(e) => setSelectedNodeId(e.target.value ? Number(e.target.value) : null)}
-          disabled={!selectedFieldId}
-          style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: selectedFieldId ? 'pointer' : 'not-allowed', opacity: selectedFieldId ? 1 : 0.5 }}
-        >
-          <option value="">전체 기기</option>
-          {nodes.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
-        </select>
-
-        <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
-          {timeRanges.map((t) => (
-            <button
-              key={t}
-              onClick={() => setSelectedTime(t)}
-              style={{
-                fontSize: '12px',
-                padding: '5px 12px',
-                borderRadius: '20px',
-                border: '0.5px solid #ccc',
-                cursor: 'pointer',
-                background: selectedTime === t ? '#1D9E75' : 'white',
-                color: selectedTime === t ? 'white' : '#888',
-                fontWeight: selectedTime === t ? 500 : 400,
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {!selectedFieldId ? (
-        <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px', background: 'white', borderRadius: '12px', border: '0.5px solid #e0e0e0' }}>
-          논을 선택하면 수위 데이터가 표시됩니다
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '12px' }}>
-          <SensorChart datasets={datasets} labels={mockLabels} singleMode={singleMode} />
-          {singleMode && (
-            <SensorStats
-              currentLevel={3.2}
-              sensorStatus="정상"
-              avg={-2.1}
-              max={5.0}
-              min={-15.2}
-              alarmCount={1}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-  

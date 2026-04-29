@@ -80,62 +80,43 @@ export const getDashboard = async () => {
   return (res.data as any).data
 }
 
-export const mapWaterStatus = (status: string): '담수' | '습윤' | '건조' | '데이터 없음' => {
-  const statusMap: Record<string, '담수' | '습윤' | '건조' | '데이터 없음'> = {
+export const mapWaterStatus = (status: string): '과담수' | '담수' | '건조중' | '건조' | '데이터 없음' => {
+  const statusMap: Record<string, '과담수' | '담수' | '건조중' | '건조' | '데이터 없음'> = {
+    OVERFLOODED: '과담수',
     FLOODED: '담수',
-    DRYING: '습윤',
+    DRYING: '건조중',
     DRY: '건조',
     NO_DATA: '데이터 없음',
   }
   return statusMap[status] ?? '데이터 없음'
 }
 
-/*아래는 api 연결 전까지 코드
-import api from './axios'
-
-export const getFields = async () => {
-  const response = await api.get('/fields')
-  return response.data
+// 아래는 4.29 추가한 api
+// dashboard.ts 에 추가
+export const getDailySummaries = async (nodeId?: number) => {
+  const url = nodeId ? `/daily-summaries?node_id=${nodeId}` : '/daily-summaries'
+  const res = await api.get(url)
+  return (res.data as any).data
 }
 
-export const getDashboard = async (fieldId?: number) => {
-  const url = fieldId ? `/dashboard?field_id=${fieldId}` : '/dashboard'
-  const response = await api.get(url)
-  return response.data
+export const getSensorLogsRange = async (nodeId: number, period: '1h' | '1d' | '1w' | '1m') => {
+  const res = await api.get(`/sensor-logs/node/${nodeId}/range?period=${period}`)
+  return (res.data as any).data.logs  // ← .data 에서 .data.logs 로 변경
 }
 
-export const getNodes = async (fieldId?: number) => {
-  const url = fieldId ? `/nodes?field_id=${fieldId}` : '/nodes'
-  const response = await api.get(url)
-  return response.data
+export const getSensorStats = async (nodeId: number) => {
+  const res = await api.get(`/sensor-logs/node/${nodeId}/stats`)
+  return (res.data as any).data
 }
 
-export const getNodeStatus = async (nodeId: number) => {
-  const response = await api.get(`/nodes/${nodeId}/status`)
-  return response.data
+export const getLatestSensorLog = async (nodeId: number) => {
+  const res = await api.get(`/sensor-logs/latest/${nodeId}`)
+  return (res.data as any).data
 }
 
-export const getSensorLogs = async (nodeId: number, start?: string, end?: string) => {
-  let url = `/sensor-logs/node/${nodeId}`
-  if (start && end) url += `?start=${start}&end=${end}`
-  const response = await api.get(url)
-  return response.data
-}
+export const downloadMrvPdf = (reportId: number) =>
+  `https://capstone-project-54l6.onrender.com/mrv-reports/${reportId}/download/pdf`
 
-export const getAlerts = async (fieldId?: number) => {
-  const url = fieldId ? `/alerts?field_id=${fieldId}` : '/alerts'
-  const response = await api.get(url)
-  return response.data
-}
+export const downloadMrvExcel = (reportId: number) =>
+  `https://capstone-project-54l6.onrender.com/mrv-reports/${reportId}/download/excel`
 
-export const resolveAlert = async (alertId: number) => {
-  const response = await api.patch(`/alerts/${alertId}/resolve`)
-  return response.data
-}
-
-export const getMrvReports = async (fieldId?: number) => {
-  const url = fieldId ? `/mrv-reports?field_id=${fieldId}` : '/mrv-reports'
-  const response = await api.get(url)
-  return response.data
-}
-  */
