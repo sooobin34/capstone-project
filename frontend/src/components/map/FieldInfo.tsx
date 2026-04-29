@@ -1,78 +1,62 @@
+import { mapWaterStatus } from '../../api/dashboard'
+
 interface Sensor {
   id: number
   name: string
-  status: '정상' | '수위 이상' | '센서 오류'
-  level: number
+  is_active: boolean
+  current_status: string
+  latest_level: number | null
 }
 
 interface FieldInfoProps {
   fieldName: string
-  currentLevel: number
   sensors: Sensor[]
 }
 
-export default function FieldInfo({ fieldName, currentLevel, sensors }: FieldInfoProps) {
-  const badgeStyle = (status: Sensor['status']) => {
-    const styles = {
-      '정상': { background: '#e8f5e9', color: '#2e7d32' },
-      '수위 이상': { background: '#fce4ec', color: '#c62828' },
-      '센서 오류': { background: '#fff8e1', color: '#f57f17' },
-    }
-    return styles[status]
+export default function FieldInfo({ fieldName, sensors }: FieldInfoProps) {
+  const statusLabel = (status: string) => {
+    if (!status || status === 'NO_DATA') return '데이터 없음'
+    if (status === 'FLOODED') return '담수'
+    if (status === 'DRYING') return '건조중'
+    if (status === 'DRY') return '건조'
+    return status
+  }
+
+  const badgeStyle = (status: string) => {
+    if (status === 'FLOODED') return { background: '#e8f5e9', color: '#2e7d32' }
+    if (status === 'DRYING') return { background: '#fff8e1', color: '#f57f17' }
+    if (status === 'DRY') return { background: '#fce4ec', color: '#c62828' }
+    return { background: '#f5f5f5', color: '#888' }
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{
-        background: 'white',
-        border: '0.5px solid #e0e0e0',
-        borderRadius: '12px',
-        padding: '16px',
+        background: 'white', border: '0.5px solid #e0e0e0',
+        borderRadius: '12px', padding: '16px',
       }}>
-        <p style={{ fontSize: '12px', color: '#888', marginBottom: '6px', fontWeight: 500 }}>{fieldName} 현재 수위</p>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '26px', fontWeight: 500 }}>{currentLevel > 0 ? `+${currentLevel}` : currentLevel}</span>
-          <span style={{ fontSize: '13px', color: '#888' }}>cm</span>
-        </div>
-        <span style={{
-          fontSize: '11px',
-          padding: '2px 8px',
-          borderRadius: '20px',
-          background: '#e8f5e9',
-          color: '#2e7d32',
-          fontWeight: 500,
-        }}>담수 정상</span>
-      </div>
-
-      <div style={{
-        background: 'white',
-        border: '0.5px solid #e0e0e0',
-        borderRadius: '12px',
-        padding: '16px',
-      }}>
-        <p style={{ fontSize: '12px', color: '#888', marginBottom: '10px', fontWeight: 500 }}>센서 상태</p>
-        {sensors.map((sensor, i) => (
+        <p style={{ fontSize: '12px', color: '#888', marginBottom: '10px', fontWeight: 500 }}>센서 상태 · {fieldName}</p>
+        {sensors.length === 0 ? (
+          <p style={{ fontSize: '13px', color: '#aaa' }}>센서 없음</p>
+        ) : sensors.map((sensor, i) => (
           <div key={sensor.id} style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '8px 0',
-            borderBottom: i < sensors.length - 1 ? '0.5px solid #f0f0f0' : 'none',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '8px 0', borderBottom: i < sensors.length - 1 ? '0.5px solid #f0f0f0' : 'none',
           }}>
             <div>
               <p style={{ fontSize: '13px', fontWeight: 500 }}>{sensor.name}</p>
-              <p style={{ fontSize: '11px', color: '#888' }}>{sensor.level > 0 ? `+${sensor.level}` : sensor.level}cm</p>
+              <p style={{ fontSize: '11px', color: '#888' }}>
+                {sensor.latest_level !== null
+                  ? `${sensor.latest_level > 0 ? '+' : ''}${sensor.latest_level}cm`
+                  : '데이터 없음'}
+              </p>
             </div>
             <span style={{
-              fontSize: '11px',
-              padding: '2px 8px',
-              borderRadius: '20px',
-              fontWeight: 500,
-              ...badgeStyle(sensor.status),
-            }}>{sensor.status}</span>
+              fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: 500,
+              ...badgeStyle(sensor.current_status),
+            }}>{statusLabel(sensor.current_status)}</span>
           </div>
         ))}
-        <p style={{ fontSize: '12px', color: '#888', marginTop: '10px', paddingTop: '8px', borderTop: '0.5px solid #f0f0f0' }}>마지막 업데이트 2분 전</p>
       </div>
     </div>
   )

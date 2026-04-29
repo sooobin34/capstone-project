@@ -129,7 +129,7 @@ export default function SensorData() {
               avg={stats.avg_inner ?? 0}
               max={stats.max_inner ?? 0}
               min={stats.min_inner ?? 0}
-              alarmCount={0}
+              alarmCount={stats?.alarm_count ?? 0}
             />
           )}
         </div>
