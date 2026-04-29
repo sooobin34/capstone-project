@@ -19,6 +19,10 @@ export default function AlarmSummaryCard({ totalCount, unresolvedCount, recentAl
       border: '0.5px solid #e0e0e0',
       borderRadius: '12px',
       padding: '16px',
+      height: '100%',
+      boxSizing: 'border-box',
+      overflowY: 'auto',
+
     }}>
       <p style={{ fontSize: '12px', color: '#888', marginBottom: '10px', fontWeight: 500 }}>알람 요약</p>
       <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>

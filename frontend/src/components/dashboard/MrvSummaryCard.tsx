@@ -18,6 +18,10 @@ export default function MrvSummaryCard({ report, onNavigate }: MrvSummaryCardPro
       border: '0.5px solid #e0e0e0',
       borderRadius: '12px',
       padding: '16px',
+      height: '100%',
+      boxSizing: 'border-box',
+      overflowY: 'hidden',
+
     }}>
       <p style={{ fontSize: '12px', color: '#888', marginBottom: '10px', fontWeight: 500 }}>MRV 보고서 요약</p>
       {report ? (
