@@ -149,14 +149,6 @@ backend
 - note
 - created_at
 
-기존 DB에 validation_records 테이블을 이미 만든 경우 pgAdmin에서 아래 컬럼을 추가합니다.
-
-```sql
-ALTER TABLE validation_records ADD COLUMN IF NOT EXISTS camera_height_cm NUMERIC(6,2);
-ALTER TABLE validation_records ADD COLUMN IF NOT EXISTS actual_water_level_cm NUMERIC(6,2);
-ALTER TABLE validation_records ADD COLUMN IF NOT EXISTS ai_predicted_status VARCHAR(50);
-ALTER TABLE validation_records ADD COLUMN IF NOT EXISTS ai_confidence NUMERIC(5,2);
-```
 
 ---
 
