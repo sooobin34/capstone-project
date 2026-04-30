@@ -120,3 +120,40 @@ export const downloadMrvPdf = (reportId: number) =>
 export const downloadMrvExcel = (reportId: number) =>
   `https://capstone-project-54l6.onrender.com/mrv-reports/${reportId}/download/excel`
 
+
+//4.29 createMrvReport 함수 추가
+export const createMrvReport = async (fieldId: number, reportMonth: string) => {
+  const res = await api.post('/mrv-reports', {
+    field_id: fieldId,
+    report_month: reportMonth,
+  })
+  return (res.data as any).data
+}
+
+//validation API 함수(validation records)
+export const uploadValidationRecord = async (formData: FormData) => {
+  const res = await api.post('/validation-records/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return (res.data as any).data
+}
+
+export const getValidationRecords = async (fieldId?: number) => {
+  const url = fieldId ? `/validation-records?field_id=${fieldId}` : '/validation-records'
+  const res = await api.get(url)
+  return (res.data as any).data
+}
+
+export const getValidationSummary = async (fieldId?: number) => {
+  const url = fieldId ? `/validation-records/summary?field_id=${fieldId}` : '/validation-records/summary'
+  const res = await api.get(url)
+  return (res.data as any).data
+}
+
+export const analyzeValidationRecord = async (recordId: number) => {
+  const res = await api.post(`/validation-records/${recordId}/analyze`)
+  return (res.data as any).data
+}
+
+export const downloadValidationRecord = (recordId: number) =>
+  `https://capstone-project-54l6.onrender.com/validation-records/${recordId}/download`

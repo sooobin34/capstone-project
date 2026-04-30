@@ -48,15 +48,19 @@ export default function MapPage() {
   }))
 
   const fieldInfoSensors = nodes.map((n) => {
-    const status = nodeStatuses[n.id]
-    return {
-      id: n.id,
-      name: `Node ${n.id}`,
-      is_active: n.is_active,
-      current_status: status?.current_status ?? 'NO_DATA',
-      latest_level: status?.latest_log?.inner_water_level ?? null,
-    }
-  })
+  const status = nodeStatuses[n.id]
+  const level = status?.latest_log?.inner_water_level ?? 0
+  const currentStatus = status?.current_status ?? 'NO_DATA'
+  const sensorStatus: '정상' | '수위 이상' | '센서 오류' =
+    currentStatus === 'NO_DATA' ? '센서 오류' :
+    currentStatus === 'DRY' ? '수위 이상' : '정상'
+  return {
+    id: n.id,
+    name: `Node ${n.id}`,
+    status: sensorStatus,
+    level,
+  }
+})
 
   return (
     <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
@@ -87,6 +91,7 @@ export default function MapPage() {
               />
               <FieldInfo
                 fieldName={selectedField.field_name}
+                currentLevel={fieldInfoSensors[0]?.level ?? 0}
                 sensors={fieldInfoSensors}
               />
             </div>

@@ -4,7 +4,8 @@ import SensorData from './pages/SensorData'
 import MapPage from './pages/MapPage'
 import MrvPage from './pages/MrvPage'
 import AlertPage from './pages/AlertPage'
-import logo from './assets/logo.png'
+import logo from './assets/logo_width.png'
+import ValidationPage from './pages/ValidationPage'
 
 
 
@@ -14,6 +15,7 @@ const navItems = [
   { label: 'Map', path: '/map' },
   { label: 'Alerts', path: '/alerts' },
   { label: 'MRV', path: '/mrv' },
+  { label: 'Validation', path: '/validation' },
 ]
 
 export default function App() {
@@ -37,7 +39,7 @@ export default function App() {
             justifyContent: 'space-between',
           }}>
            <NavLink to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
-           <img src={logo} alt="AquaPaddy" style={{ height: '47px', objectFit: 'contain',marginTop: '-6px' }} />
+           <img src={logo} alt="AquaPaddy" style={{ height: '54px', objectFit: 'contain',marginTop: '-6px' }} />
            </NavLink>
             <div style={{ display: 'flex', gap: '8px' }}>
               {navItems.map((item) => (
@@ -69,6 +71,7 @@ export default function App() {
           <Route path="/map" element={<MapPage />} />
           <Route path="/alerts" element={<AlertPage />} />
           <Route path="/mrv" element={<MrvPage />} />
+          <Route path="/validation" element={<ValidationPage />} />
         </Routes>
       </div>
     </BrowserRouter>
