@@ -149,7 +149,6 @@ backend
 - note
 - created_at
 
-
 ---
 
 ## 5. 주요 API 목록
