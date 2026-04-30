@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.models.awd_daily_summary import AwdDailySummary
 from app.models.field import Field
 from app.models.iot_node import IotNode
 from app.models.validation_record import ValidationRecord
@@ -20,11 +21,17 @@ from app.schemas.validation_record import (
 )
 from app.utils.response import success_response
 
-router = APIRouter(prefix="/validation-records", tags=["Validation Records"])
+router = APIRouter(prefix="/validations", tags=["Validations"])
 
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads" / "validation_records"
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-STATUS_VALUES = {"FLOODED", "DRYING", "DRY", "UNKNOWN"}
+SENSOR_STATUS_VALUES = {"OVERFLOODED", "FLOODED", "DRYING", "DRY"}
+SURFACE_STATUS_VALUES = {"WATER_VISIBLE", "NO_WATER_VISIBLE", "UNKNOWN"}
+SENSOR_TO_SURFACE_STATUS = {
+    "OVERFLOODED": "WATER_VISIBLE",
+    "FLOODED": "WATER_VISIBLE",
+    "DRY": "NO_WATER_VISIBLE",
+}
 
 
 def ensure_field_exists(db: Session, field_id: int):
@@ -39,24 +46,65 @@ def ensure_node_exists(db: Session, node_id: int | None):
         raise HTTPException(status_code=404, detail="node_id does not exist.")
 
 
-def calculate_match(sensor_status: str | None, observed_status: str | None) -> bool | None:
-    if not sensor_status or not observed_status:
-        return None
-    if observed_status == "UNKNOWN":
-        return None
-    return sensor_status.upper() == observed_status.upper()
-
-
-def normalize_status(status: str | None) -> str | None:
+def normalize_sensor_status(status: str | None) -> str | None:
     if status is None:
         return None
     normalized = status.strip().upper()
-    if normalized not in STATUS_VALUES:
+    if normalized not in SENSOR_STATUS_VALUES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid status '{status}'. Use one of {sorted(STATUS_VALUES)}.",
+            detail=f"Invalid sensor status '{status}'. Use one of {sorted(SENSOR_STATUS_VALUES)}.",
         )
     return normalized
+
+
+def normalize_surface_status(status: str | None) -> str | None:
+    if status is None:
+        return None
+    normalized = status.strip().upper()
+    if normalized not in SURFACE_STATUS_VALUES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid surface status '{status}'. Use one of {sorted(SURFACE_STATUS_VALUES)}.",
+        )
+    return normalized
+
+
+def derive_sensor_status_from_level(actual_water_level_cm: float | None) -> str | None:
+    if actual_water_level_cm is None:
+        return None
+    if actual_water_level_cm >= 5:
+        return "OVERFLOODED"
+    if actual_water_level_cm >= 0:
+        return "FLOODED"
+    if actual_water_level_cm > -15:
+        return "DRYING"
+    return "DRY"
+
+
+def get_sensor_status(db: Session, node_id: int | None, record_date: date, actual_water_level_cm: float | None) -> str | None:
+    if node_id is not None:
+        summary = (
+            db.query(AwdDailySummary)
+            .filter(
+                AwdDailySummary.node_id == node_id,
+                AwdDailySummary.record_date == record_date,
+            )
+            .order_by(AwdDailySummary.id.desc())
+            .first()
+        )
+        if summary:
+            return normalize_sensor_status(summary.daily_status)
+    return derive_sensor_status_from_level(actual_water_level_cm)
+
+
+def calculate_match(sensor_status: str | None, observed_status: str | None) -> bool | None:
+    if not sensor_status or not observed_status or observed_status == "UNKNOWN":
+        return None
+    expected_surface_status = SENSOR_TO_SURFACE_STATUS.get(sensor_status)
+    if expected_surface_status is None:
+        return None
+    return expected_surface_status == observed_status
 
 
 def build_ai_note(result: dict) -> str:
@@ -106,11 +154,8 @@ def create_validation_record(payload: ValidationRecordCreate, db: Session = Depe
     ensure_field_exists(db, payload.field_id)
     ensure_node_exists(db, payload.node_id)
 
-    sensor_status = normalize_status(payload.sensor_predicted_status)
-    observed_status = normalize_status(payload.observed_surface_status)
-    is_match = payload.is_match
-    if is_match is None:
-        is_match = calculate_match(sensor_status, observed_status)
+    observed_status = normalize_surface_status(payload.observed_surface_status)
+    sensor_status = get_sensor_status(db, payload.node_id, payload.record_date, payload.actual_water_level_cm)
 
     record = ValidationRecord(
         field_id=payload.field_id,
@@ -119,9 +164,11 @@ def create_validation_record(payload: ValidationRecordCreate, db: Session = Depe
         captured_at=payload.captured_at,
         image_url=payload.image_url,
         image_title=payload.image_title,
+        camera_height_cm=payload.camera_height_cm,
+        actual_water_level_cm=payload.actual_water_level_cm,
         sensor_predicted_status=sensor_status,
         observed_surface_status=observed_status,
-        is_match=is_match,
+        is_match=calculate_match(sensor_status, observed_status),
         note=payload.note,
     )
     db.add(record)
@@ -139,7 +186,8 @@ async def upload_validation_image(
     record_date: date = Form(...),
     captured_at: datetime | None = Form(default=None),
     image_title: str | None = Form(default=None),
-    sensor_predicted_status: str | None = Form(default=None),
+    camera_height_cm: float | None = Form(default=None),
+    actual_water_level_cm: float | None = Form(default=None),
     observed_surface_status: str | None = Form(default=None),
     note: str | None = Form(default=None),
     file: UploadFile = File(...),
@@ -160,8 +208,8 @@ async def upload_validation_image(
     destination.write_bytes(content)
 
     image_url = str(request.base_url).rstrip("/") + f"/uploads/validation_records/{filename}"
-    sensor_status = normalize_status(sensor_predicted_status)
-    observed_status = normalize_status(observed_surface_status)
+    observed_status = normalize_surface_status(observed_surface_status)
+    sensor_status = get_sensor_status(db, node_id, record_date, actual_water_level_cm)
 
     record = ValidationRecord(
         field_id=field_id,
@@ -170,6 +218,8 @@ async def upload_validation_image(
         captured_at=captured_at,
         image_url=image_url,
         image_title=image_title or file.filename,
+        camera_height_cm=camera_height_cm,
+        actual_water_level_cm=actual_water_level_cm,
         sensor_predicted_status=sensor_status,
         observed_surface_status=observed_status,
         is_match=calculate_match(sensor_status, observed_status),
@@ -183,7 +233,7 @@ async def upload_validation_image(
 
 
 @router.get("")
-def get_validation_records(
+def get_validations(
     field_id: int | None = Query(default=None),
     node_id: int | None = Query(default=None),
     record_date: date | None = Query(default=None),
@@ -198,7 +248,7 @@ def get_validation_records(
         query = query.filter(ValidationRecord.record_date == record_date)
 
     records = query.order_by(ValidationRecord.record_date.desc(), ValidationRecord.id.desc()).all()
-    return success_response(records, "Validation records loaded.")
+    return success_response(records, "Validations loaded.")
 
 
 @router.get("/summary")
@@ -226,45 +276,51 @@ def get_validation_summary(
     )
 
 
-@router.get("/{record_id}")
-def get_validation_record(record_id: int, db: Session = Depends(get_db)):
-    record = db.query(ValidationRecord).filter(ValidationRecord.id == record_id).first()
+@router.get("/{validation_id}")
+def get_validation(validation_id: int, db: Session = Depends(get_db)):
+    record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Validation record not found.")
-    return success_response(record, "Validation record loaded.")
+    return success_response(record, "Validation loaded.")
 
 
-@router.patch("/{record_id}")
-def update_validation_record(
-    record_id: int,
+@router.patch("/{validation_id}")
+def update_validation(
+    validation_id: int,
     payload: ValidationRecordUpdate,
     db: Session = Depends(get_db),
 ):
-    record = db.query(ValidationRecord).filter(ValidationRecord.id == record_id).first()
+    record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Validation record not found.")
 
     if payload.image_title is not None:
         record.image_title = payload.image_title
-    if payload.sensor_predicted_status is not None:
-        record.sensor_predicted_status = normalize_status(payload.sensor_predicted_status)
+    if payload.camera_height_cm is not None:
+        record.camera_height_cm = payload.camera_height_cm
+    if payload.actual_water_level_cm is not None:
+        record.actual_water_level_cm = payload.actual_water_level_cm
     if payload.observed_surface_status is not None:
-        record.observed_surface_status = normalize_status(payload.observed_surface_status)
+        record.observed_surface_status = normalize_surface_status(payload.observed_surface_status)
     if payload.note is not None:
         record.note = payload.note
 
-    record.is_match = payload.is_match
-    if record.is_match is None:
-        record.is_match = calculate_match(record.sensor_predicted_status, record.observed_surface_status)
+    record.sensor_predicted_status = get_sensor_status(
+        db,
+        record.node_id,
+        record.record_date,
+        float(record.actual_water_level_cm) if record.actual_water_level_cm is not None else None,
+    )
+    record.is_match = calculate_match(record.sensor_predicted_status, record.observed_surface_status)
 
     db.commit()
     db.refresh(record)
-    return success_response(record, "Validation record updated.")
+    return success_response(record, "Validation updated.")
 
 
-@router.get("/{record_id}/download")
-def download_validation_image(record_id: int, db: Session = Depends(get_db)):
-    record = db.query(ValidationRecord).filter(ValidationRecord.id == record_id).first()
+@router.get("/{validation_id}/download")
+def download_validation_image(validation_id: int, db: Session = Depends(get_db)):
+    record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Validation record not found.")
 
@@ -275,13 +331,13 @@ def download_validation_image(record_id: int, db: Session = Depends(get_db)):
     return RedirectResponse(record.image_url)
 
 
-@router.post("/{record_id}/analyze")
+@router.post("/{validation_id}/analyze")
 def analyze_validation_image(
-    record_id: int,
+    validation_id: int,
     payload: ValidationAnalyzeRequest | None = None,
     db: Session = Depends(get_db),
 ):
-    record = db.query(ValidationRecord).filter(ValidationRecord.id == record_id).first()
+    record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Validation record not found.")
 
@@ -299,15 +355,17 @@ def analyze_validation_image(
 
     prompt = """
 This is a validation image for an AWD rice paddy water-management capstone project.
-Classify the visible paddy surface into exactly one of:
-FLOODED, DRYING, DRY, UNKNOWN.
+Classify whether standing water is visible on the paddy surface.
+
+Use exactly one of:
+WATER_VISIBLE, NO_WATER_VISIBLE, UNKNOWN.
 
 Do not estimate exact centimeter water depth. Use only visual evidence such as
-visible standing water, wet soil, dry soil, reflection, and occlusion.
+standing water, reflections, wet/dry soil, vegetation, angle, and occlusion.
 
 Return JSON only:
 {
-  "observed_surface_status": "FLOODED | DRYING | DRY | UNKNOWN",
+  "ai_predicted_status": "WATER_VISIBLE | NO_WATER_VISIBLE | UNKNOWN",
   "confidence": 0-100,
   "reason": "short evidence",
   "limitations": "angle/reflection/occlusion/weather limitations"
@@ -333,13 +391,12 @@ Return JSON only:
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"OpenAI image analysis failed: {exc}") from exc
 
-    observed_status = normalize_status(result.get("observed_surface_status"))
-    result["observed_surface_status"] = observed_status
-    result["is_match"] = calculate_match(record.sensor_predicted_status, observed_status)
+    ai_status = normalize_surface_status(result.get("ai_predicted_status"))
+    result["ai_predicted_status"] = ai_status
 
     if payload is None or payload.save_result:
-        record.observed_surface_status = observed_status
-        record.is_match = result["is_match"]
+        record.ai_predicted_status = ai_status
+        record.ai_confidence = result.get("confidence")
         record.note = build_ai_note(result)
         db.commit()
         db.refresh(record)
