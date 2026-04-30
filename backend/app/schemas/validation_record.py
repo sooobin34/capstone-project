@@ -10,17 +10,17 @@ class ValidationRecordCreate(BaseModel):
     captured_at: datetime | None = None
     image_url: str
     image_title: str | None = None
-    sensor_predicted_status: str | None = None
+    camera_height_cm: float | None = None
+    actual_water_level_cm: float | None = None
     observed_surface_status: str | None = None
-    is_match: bool | None = None
     note: str | None = None
 
 
 class ValidationRecordUpdate(BaseModel):
     image_title: str | None = None
-    sensor_predicted_status: str | None = None
+    camera_height_cm: float | None = None
+    actual_water_level_cm: float | None = None
     observed_surface_status: str | None = None
-    is_match: bool | None = None
     note: str | None = None
 
 
@@ -30,11 +30,10 @@ class ValidationAnalyzeRequest(BaseModel):
 
 
 class ValidationAnalyzeResult(BaseModel):
-    observed_surface_status: str = Field(description="FLOODED, DRYING, DRY, or UNKNOWN")
+    ai_predicted_status: str = Field(description="WATER_VISIBLE, NO_WATER_VISIBLE, or UNKNOWN")
     confidence: float
     reason: str
     limitations: str | None = None
-    is_match: bool | None = None
 
 
 class ValidationRecordRead(BaseModel):
@@ -45,8 +44,12 @@ class ValidationRecordRead(BaseModel):
     captured_at: datetime | None = None
     image_url: str
     image_title: str | None = None
+    camera_height_cm: float | None = None
+    actual_water_level_cm: float | None = None
     sensor_predicted_status: str | None = None
     observed_surface_status: str | None = None
+    ai_predicted_status: str | None = None
+    ai_confidence: float | None = None
     is_match: bool | None = None
     note: str | None = None
     created_at: datetime
