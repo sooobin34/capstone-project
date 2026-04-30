@@ -132,28 +132,28 @@ export const createMrvReport = async (fieldId: number, reportMonth: string) => {
 
 //validation API 함수(validation records)
 export const uploadValidationRecord = async (formData: FormData) => {
-  const res = await api.post('/validation-records/upload', formData, {
+  const res = await api.post('/validations/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
   return (res.data as any).data
 }
 
 export const getValidationRecords = async (fieldId?: number) => {
-  const url = fieldId ? `/validation-records?field_id=${fieldId}` : '/validation-records'
+  const url = fieldId ? `/validations?field_id=${fieldId}` : '/validations'
   const res = await api.get(url)
   return (res.data as any).data
 }
 
 export const getValidationSummary = async (fieldId?: number) => {
-  const url = fieldId ? `/validation-records/summary?field_id=${fieldId}` : '/validation-records/summary'
+  const url = fieldId ? `/validations/summary?field_id=${fieldId}` : '/validations/summary'
   const res = await api.get(url)
   return (res.data as any).data
 }
 
 export const analyzeValidationRecord = async (recordId: number) => {
-  const res = await api.post(`/validation-records/${recordId}/analyze`)
+  const res = await api.post(`/validations/${recordId}/analyze`)
   return (res.data as any).data
 }
 
 export const downloadValidationRecord = (recordId: number) =>
-  `https://capstone-project-54l6.onrender.com/validation-records/${recordId}/download`
+  `https://capstone-project-54l6.onrender.com/validations/${recordId}/download`

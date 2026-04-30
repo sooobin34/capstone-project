@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { getFields, getNodes, uploadValidationRecord, getValidationRecords, getValidationSummary, analyzeValidationRecord } from '../api/dashboard'
 
-const STATUS_OPTIONS = ['FLOODED', 'DRYING', 'DRY', 'UNKNOWN']
-const STATUS_LABEL: Record<string, string> = {
-  FLOODED: '담수', DRYING: '건조중', DRY: '건조', UNKNOWN: '알 수 없음'
-}
+const STATUS_OPTIONS = [
+  { label: '물 보임', value: 'WATER_VISIBLE' },
+  { label: '물 안 보임', value: 'NO_WATER_VISIBLE' },
+  { label: '모름', value: 'UNKNOWN' },
+]
 
 export default function ValidationPage() {
   const [fields, setFields] = useState<any[]>([])
@@ -15,9 +16,11 @@ export default function ValidationPage() {
   const [fieldId, setFieldId] = useState<number | ''>('')
   const [nodeId, setNodeId] = useState<number | ''>('')
   const [recordDate, setRecordDate] = useState('')
+  const [capturedAt, setCapturedAt] = useState('')
   const [imageTitle, setImageTitle] = useState('')
-  const [sensorStatus, setSensorStatus] = useState('FLOODED')
-  const [observedStatus, setObservedStatus] = useState('FLOODED')
+  const [cameraHeightCm, setCameraHeightCm] = useState('')
+  const [actualWaterLevelCm, setActualWaterLevelCm] = useState('')
+  const [observedStatus, setObservedStatus] = useState('WATER_VISIBLE')
   const [note, setNote] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -27,6 +30,8 @@ export default function ValidationPage() {
 
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
+    getValidationRecords().then(setRecords).catch(console.error)
+    getValidationSummary().then(setSummary).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -36,6 +41,7 @@ export default function ValidationPage() {
       getValidationSummary(Number(fieldId)).then(setSummary).catch(console.error)
     } else {
       setNodes([])
+      setNodeId('')
       getValidationRecords().then(setRecords).catch(console.error)
       getValidationSummary().then(setSummary).catch(console.error)
     }
@@ -62,10 +68,12 @@ export default function ValidationPage() {
       formData.append('field_id', String(fieldId))
       formData.append('node_id', String(nodeId))
       formData.append('record_date', recordDate)
+      if (capturedAt) formData.append('captured_at', capturedAt)
       formData.append('image_title', imageTitle || file.name)
-      formData.append('sensor_predicted_status', sensorStatus)
+      if (cameraHeightCm) formData.append('camera_height_cm', cameraHeightCm)
+      if (actualWaterLevelCm) formData.append('actual_water_level_cm', actualWaterLevelCm)
       formData.append('observed_surface_status', observedStatus)
-      formData.append('note', note)
+      if (note) formData.append('note', note)
       formData.append('file', file)
 
       await uploadValidationRecord(formData)
@@ -74,8 +82,10 @@ export default function ValidationPage() {
       setPreview(null)
       setImageTitle('')
       setNote('')
+      setCameraHeightCm('')
+      setActualWaterLevelCm('')
+      setCapturedAt('')
 
-      // 목록 새로고침
       const updated = await getValidationRecords(fieldId ? Number(fieldId) : undefined)
       setRecords(updated)
       const updatedSummary = await getValidationSummary(fieldId ? Number(fieldId) : undefined)
@@ -151,29 +161,34 @@ export default function ValidationPage() {
             <input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)} style={inputStyle} />
           </div>
           <div>
-            <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>사진 제목</p>
-            <input type="text" value={imageTitle} onChange={(e) => setImageTitle(e.target.value)} placeholder="사진 제목 (선택)" style={inputStyle} />
+            <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>촬영 시각 (선택)</p>
+            <input type="datetime-local" value={capturedAt} onChange={(e) => setCapturedAt(e.target.value)} style={inputStyle} />
           </div>
           <div>
-            <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>센서 예측 상태</p>
-            <select value={sensorStatus} onChange={(e) => setSensorStatus(e.target.value)} style={selectStyle}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-            </select>
+            <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>사진 제목 (선택)</p>
+            <input type="text" value={imageTitle} onChange={(e) => setImageTitle(e.target.value)} placeholder="사진 제목" style={inputStyle} />
+          </div>
+          <div>
+            <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>카메라 높이 cm (선택)</p>
+            <input type="number" value={cameraHeightCm} onChange={(e) => setCameraHeightCm(e.target.value)} placeholder="예: 120" style={inputStyle} />
+          </div>
+          <div>
+            <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>실제 수위 cm (선택)</p>
+            <input type="number" value={actualWaterLevelCm} onChange={(e) => setActualWaterLevelCm(e.target.value)} placeholder="예: -5" style={inputStyle} />
           </div>
           <div>
             <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>실제 관찰 상태</p>
             <select value={observedStatus} onChange={(e) => setObservedStatus(e.target.value)} style={selectStyle}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+              {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
         </div>
 
         <div style={{ marginBottom: '10px' }}>
-          <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>메모</p>
-          <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="메모 (선택)" style={inputStyle} />
+          <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>메모 (선택)</p>
+          <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="메모" style={inputStyle} />
         </div>
 
-        {/* 사진 업로드 */}
         <div style={{ marginBottom: '12px' }}>
           <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>사진 선택</p>
           <input type="file" accept="image/*" onChange={handleFileChange} style={{ fontSize: '13px' }} />
@@ -221,20 +236,14 @@ export default function ValidationPage() {
                   {record.image_title || '제목 없음'} · {record.record_date}
                 </p>
                 <p style={{ fontSize: '11px', color: '#888' }}>
-                  센서: {STATUS_LABEL[record.sensor_predicted_status] ?? record.sensor_predicted_status} · 실제: {STATUS_LABEL[record.observed_surface_status] ?? record.observed_surface_status}
+                  실제: {STATUS_OPTIONS.find(s => s.value === record.observed_surface_status)?.label ?? record.observed_surface_status}
+                  {record.actual_water_level_cm != null && ` · 수위 ${record.actual_water_level_cm}cm`}
                 </p>
                 {record.ai_analysis_result && (
                   <p style={{ fontSize: '11px', color: '#1565c0', marginTop: '2px' }}>AI: {record.ai_analysis_result}</p>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                <span style={{
-                  fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: 500,
-                  background: record.is_match ? '#e8f5e9' : '#fce4ec',
-                  color: record.is_match ? '#2e7d32' : '#c62828',
-                }}>
-                  {record.is_match ? '일치' : '불일치'}
-                </span>
                 <button
                   onClick={() => handleAnalyze(record.id)}
                   style={{
