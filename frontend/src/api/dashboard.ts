@@ -132,9 +132,7 @@ export const createMrvReport = async (fieldId: number, reportMonth: string) => {
 
 //validation API 함수(validation records)
 export const uploadValidationRecord = async (formData: FormData) => {
-  const res = await api.post('/validations/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+  const res = await api.post('/validations/upload', formData)
   return (res.data as any).data
 }
 
