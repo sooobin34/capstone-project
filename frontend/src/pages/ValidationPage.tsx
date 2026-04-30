@@ -162,7 +162,7 @@ export default function ValidationPage() {
           </div>
           <div>
             <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>촬영 시각 (선택)</p>
-            <input type="datetime-local" value={capturedAt} onChange={(e) => setCapturedAt(e.target.value)} style={inputStyle} />
+            <input type="time" value={capturedAt} onChange={(e) => setCapturedAt(e.target.value)} style={inputStyle} />
           </div>
           <div>
             <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>사진 제목 (선택)</p>
