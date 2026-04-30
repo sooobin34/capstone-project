@@ -139,8 +139,12 @@ backend
 - captured_at
 - image_url
 - image_title
+- camera_height_cm
+- actual_water_level_cm
 - sensor_predicted_status
 - observed_surface_status
+- ai_predicted_status
+- ai_confidence
 - is_match
 - note
 - created_at
@@ -181,21 +185,21 @@ backend
 
 ### 검증 사진
 
-- POST /validation-records : 검증 사진 기록 저장
+- POST /validations : 검증 사진 기록 저장
 
-- POST /validation-records/upload : 검증 사진 파일 업로드 및 기록 저장
+- POST /validations/upload : 검증 사진 파일 업로드 및 기록 저장
 
-- GET /validation-records : 검증 사진 기록 조회
+- GET /validations : 검증 사진 기록 조회
 
-- GET /validation-records/summary : 검증 표본 수, 일치 수, 정확도 조회
+- GET /validations/summary : 검증 표본 수, 일치 수, 정확도 조회
 
-- GET /validation-records/{record_id} : 검증 사진 기록 단건 조회
+- GET /validations/{validation_id} : 검증 사진 기록 단건 조회
 
-- PATCH /validation-records/{record_id} : 검증 사진 기록 수정
+- PATCH /validations/{validation_id} : 검증 사진 기록 수정
 
-- GET /validation-records/{record_id}/download : 검증 사진 다운로드 또는 URL 이동
+- GET /validations/{validation_id}/download : 검증 사진 다운로드 또는 URL 이동
 
-- POST /validation-records/{record_id}/analyze : OpenAI Vision 기반 사진 상태 분석
+- POST /validations/{validation_id}/analyze : OpenAI Vision 기반 사진 상태 분석
 
 ### 대시보드
 
@@ -240,13 +244,21 @@ backend
 
 ### 검증 사진 상태 분류 기준
 
-- FLOODED: 물이 차 있는 담수 상태
+- sensor_predicted_status: 백엔드가 daily_summary 기준으로 자동 저장합니다. 값은 OVERFLOODED, FLOODED, DRYING, DRY입니다.
 
-- DRYING: 물이 빠지는 중이거나 습윤 상태
+- observed_surface_status: 프론트에서 사용자가 선택합니다. 값은 WATER_VISIBLE, NO_WATER_VISIBLE, UNKNOWN입니다.
 
-- DRY: 건조 상태
+- ai_predicted_status: OpenAI Vision 분석 후 백엔드가 저장합니다. 값은 WATER_VISIBLE, NO_WATER_VISIBLE, UNKNOWN입니다.
 
-- UNKNOWN: 사진만으로 판단하기 어려운 상태
+- observed_surface_status에는 FLOODED, DRYING, DRY 같은 센서 상태값을 보내지 않습니다.
+
+### 검증 사진 입력 필드
+
+- 프론트 입력: field_id, node_id, record_date, captured_at, image_title, camera_height_cm, actual_water_level_cm, observed_surface_status, note, file
+
+- 백엔드 자동 생성/계산: image_url, sensor_predicted_status, ai_predicted_status, ai_confidence, is_match
+
+- 파일 업로드는 multipart/form-data를 사용합니다.
 
 ### 검증 정확도 계산식
 
@@ -256,7 +268,7 @@ backend
 
 - OpenAI 분석은 선택 기능입니다.
 - OPENAI_API_KEY가 없어도 검증 사진 저장, 조회, 업로드, 정확도 계산은 동작합니다.
-- OPENAI_API_KEY가 없을 경우 POST /validation-records/{record_id}/analyze API만 사용할 수 없습니다.
+- OPENAI_API_KEY가 없을 경우 POST /validations/{validation_id}/analyze API만 사용할 수 없습니다.
 
 ---
 
