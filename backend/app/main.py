@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.api.alerts import router as alerts_router
@@ -18,14 +19,18 @@ from app.models.awd_daily_summary import AwdDailySummary
 from app.models.iot_node import IotNode
 from app.models.mrv_report import MrvReport
 from app.models.sensor_log import SensorLog
+from app.models.validation_record import ValidationRecord
 
 app = FastAPI(title="AWD Backend Server")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://localhost:5173",
-        "https://capstone-project-theta-amber.vercel.app"
+        "http://127.0.0.1:5173",
+        "https://capstone-project-theta-amber.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -41,6 +46,9 @@ app.include_router(mrv_reports_router)
 app.include_router(dashboard_router)
 app.include_router(fields_router)
 app.include_router(validations.router)
+
+app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
+
 
 @app.get("/")
 def root():
