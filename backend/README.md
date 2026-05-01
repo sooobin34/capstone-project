@@ -27,7 +27,8 @@
 - 일일 수위 상태 요약 생성
 - 월별 MRV 보고서 생성
 - MRV 상태 관리 (작성중 / 완료)
-- MRV 검증(V) 데이터 관리
+- 사진 기반 검증 기록 저장 및 센서 상태와의 일치율 계산
+- OpenAI Vision API 기반 검증 사진 자동 분석 (선택 기능)
 - MRV PDF / Excel 다운로드
 - 월간 수위 운영 요약, 검증(V) 데이터, 대표 이미지 URL 기반 보고서 출력 지원
 - 대시보드 통합 데이터 조회
@@ -76,6 +77,8 @@ backend
  ┃ ┃ ┗ mrv_report.py
  ┃ ┣ utils
  ┃ ┃ ┗ response.py
+ ┃ ┣ uploads
+ ┃ ┃ ┗ validation_records
  ┃ ┗ main.py
  ┣ mock_sensor_sender.py
  ┗ README.md
@@ -151,17 +154,23 @@ backend
 
 ※ 검증 결과는 mrv_reports 테이블에 직접 저장하지 않고, validation_records를 조회하여 보고서 생성 시 자동 집계한다.
 
-### 7) validation_records
-→ 현장 촬영 이미지 기반 검증 데이터를 저장하는 테이블
+### 6) validation_records
+현장 사진 기반 검증 이력 데이터입니다.
+센서가 예측한 상태와 사진 관찰 상태를 비교하여 검증 정확도를 계산합니다.
 
 - id
 - field_id
 - node_id
 - record_date
+- captured_at
 - image_url
 - image_title
+- camera_height_cm
+- actual_water_level_cm
 - sensor_predicted_status
 - observed_surface_status
+- ai_predicted_status
+- ai_confidence
 - is_match
 - note
 - created_at
@@ -224,11 +233,23 @@ backend
 
 - GET /dashboard : 대시보드 요약 조회
 
-### 검증 데이터
+### 검증 사진
 
-- POST /validations : 검증 사진/기록 등록
-- GET /validations : 검증 기록 조회
-- PATCH /validations/{validation_id} : 검증 기록 수정
+- POST /validations : 검증 사진 기록 저장
+
+- POST /validations/upload : 검증 사진 파일 업로드 및 기록 저장
+
+- GET /validations : 검증 사진 기록 조회
+
+- GET /validations/summary : 검증 표본 수, 일치 수, 정확도 조회
+
+- GET /validations/{validation_id} : 검증 사진 기록 단건 조회
+
+- PATCH /validations/{validation_id} : 검증 사진 기록 수정
+
+- GET /validations/{validation_id}/download : 검증 사진 다운로드 또는 URL 이동
+
+- POST /validations/{validation_id}/analyze : OpenAI Vision 기반 사진 상태 분석
 
 ---
 
@@ -277,14 +298,33 @@ backend
 ※ AWD 수행은 단순히 FLOODED 상태로 복귀하는 경우뿐 아니라,
 건조(DRY) 이후 수위가 상승하여 DRYING 이상 상태로 전환되는 모든 경우를 포함한다.
 
-### 현장 검증(V) 기준
+### 검증 사진 상태 분류 기준
 
-- sensor_predicted_status는 센서 기반 상태값으로 OVERFLOODED / FLOODED / DRYING / DRY 중 하나를 사용한다.
-- observed_surface_status는 현장 사진 기반 표면 상태값으로 WATER_VISIBLE / NO_WATER_VISIBLE / UNKNOWN 중 하나를 사용한다.
-- FLOODED 또는 OVERFLOODED 상태에서 WATER_VISIBLE이면 일치로 판단한다.
-- DRYING 또는 DRY 상태에서 NO_WATER_VISIBLE이면 일치로 판단한다.
-- UNKNOWN은 판별 불가 상태로 사용한다.
-- 사진 검증은 수위 cm를 직접 검증하는 것이 아니라, 표면 담수 여부를 확인하는 보조 검증으로 사용한다.
+- sensor_predicted_status: 백엔드가 daily_summary 기준으로 자동 저장합니다. 값은 OVERFLOODED, FLOODED, DRYING, DRY입니다.
+
+- observed_surface_status: 프론트에서 사용자가 선택합니다. 값은 WATER_VISIBLE, NO_WATER_VISIBLE, UNKNOWN입니다.
+
+- ai_predicted_status: OpenAI Vision 분석 후 백엔드가 저장합니다. 값은 WATER_VISIBLE, NO_WATER_VISIBLE, UNKNOWN입니다.
+
+- observed_surface_status에는 FLOODED, DRYING, DRY 같은 센서 상태값을 보내지 않습니다.
+
+### 검증 사진 입력 필드
+
+- 프론트 입력: field_id, node_id, record_date, captured_at, image_title, camera_height_cm, actual_water_level_cm, observed_surface_status, note, file
+
+- 백엔드 자동 생성/계산: image_url, sensor_predicted_status, ai_predicted_status, ai_confidence, is_match
+
+- 파일 업로드는 multipart/form-data를 사용합니다.
+
+### 검증 정확도 계산식
+
+- validation_accuracy = validation_match_count / validation_sample_count * 100
+
+### OpenAI Vision 분석
+
+- OpenAI 분석은 선택 기능입니다.
+- OPENAI_API_KEY가 없어도 검증 사진 저장, 조회, 업로드, 정확도 계산은 동작합니다.
+- OPENAI_API_KEY가 없을 경우 POST /validations/{validation_id}/analyze API만 사용할 수 없습니다.
 
 ---
 
@@ -332,6 +372,16 @@ Render 배포 서버:
 https://capstone-project-54l6.onrender.com/db-test
 ```
 - 데이터베이스 연결 상태 확인용
+
+### 6) 환경변수
+```text
+DATABASE_URL=PostgreSQL 연결 문자열
+OPENAI_API_KEY=OpenAI API 키
+OPENAI_VISION_MODEL=gpt-4.1-mini
+```
+
+OPENAI_API_KEY는 검증 사진 자동 분석 API를 사용할 때만 필요합니다.
+DATABASE_URL, OPENAI_API_KEY 등 민감정보는 GitHub에 커밋하지 않습니다.
 
 ---
 
@@ -449,7 +499,7 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 
 - 백엔드 API 구현 진행 중
 - Render 배포 서버 운영 중
-- validation_records 테이블 추가 후 MRV 검증 데이터 연동 예정
+- validation_records 테이블 추가 완료, MRV 검증 데이터 연동 예정
 - 프론트 연동 진행 중
 - MRV PDF / Excel 보고서 형식 보강 완료
 
