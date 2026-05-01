@@ -50,11 +50,8 @@ app.include_router(dashboard_router)
 app.include_router(fields_router)
 app.include_router(validations.router)
 
-app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
-
 Path("app/uploads").mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
-
 
 @app.get("/")
 def root():
