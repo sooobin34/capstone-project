@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from pathlib import Path
 
 from app.api.alerts import router as alerts_router
 from app.api.daily_summaries import router as daily_summaries_router
@@ -12,6 +13,7 @@ from app.api.sensor_logs import router as sensor_logs_router
 from app.api.fields import router as fields_router
 from app.api import validations
 from app.core.database import engine
+
 
 # 모델 import는 유지해도 되고, 안 써도 됨
 from app.models.alert import Alert
@@ -31,6 +33,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://capstone-project-theta-amber.vercel.app",
+    
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -47,6 +50,9 @@ app.include_router(dashboard_router)
 app.include_router(fields_router)
 app.include_router(validations.router)
 
+app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
+
+Path("app/uploads").mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 
 
