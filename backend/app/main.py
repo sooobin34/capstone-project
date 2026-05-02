@@ -11,6 +11,7 @@ from app.api.mrv_reports import router as mrv_reports_router
 from app.api.nodes import router as nodes_router
 from app.api.sensor_logs import router as sensor_logs_router
 from app.api.fields import router as fields_router
+from app.api.lora_webhook import router as lora_webhook_router
 from app.api import validations
 from app.core.database import engine
 
@@ -49,6 +50,7 @@ app.include_router(mrv_reports_router)
 app.include_router(dashboard_router)
 app.include_router(fields_router)
 app.include_router(validations.router)
+app.include_router(lora_webhook_router)
 
 Path("app/uploads").mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
