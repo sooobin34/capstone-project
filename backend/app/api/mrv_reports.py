@@ -157,10 +157,18 @@ def get_validation_summary(field_id: int, start_date: date, end_date: date, db: 
     rows = get_validation_rows(field_id, start_date, end_date, db)
 
     sample_count = len(rows)
-    match_count = sum(1 for row in rows if row.is_match is True)
-    mismatch_count = sum(1 for row in rows if row.is_match is False)
+
+    sensor_valid_rows = [row for row in rows if row.is_match is not None]
+    match_count = sum(1 for row in sensor_valid_rows if row.is_match is True)
+    mismatch_count = sum(1 for row in sensor_valid_rows if row.is_match is False)
     unknown_count = sum(1 for row in rows if row.is_match is None)
-    accuracy = round((match_count / sample_count) * 100, 2) if sample_count > 0 else 0
+    accuracy = round((match_count / len(sensor_valid_rows)) * 100, 2) if sensor_valid_rows else 0
+
+    ai_sensor_rows = [row for row in rows if row.ai_sensor_match is not None]
+    ai_sensor_match_count = sum(1 for row in ai_sensor_rows if row.ai_sensor_match is True)
+    ai_sensor_mismatch_count = sum(1 for row in ai_sensor_rows if row.ai_sensor_match is False)
+    ai_sensor_unknown_count = sample_count - len(ai_sensor_rows)
+    ai_sensor_accuracy = round((ai_sensor_match_count / len(ai_sensor_rows)) * 100, 2) if ai_sensor_rows else 0
 
     notes = [row.note for row in rows if row.note]
     note = notes[-1] if notes else "별도 비고 없음"
@@ -174,6 +182,10 @@ def get_validation_summary(field_id: int, start_date: date, end_date: date, db: 
         "validation_mismatch_count": mismatch_count,
         "validation_unknown_count": unknown_count,
         "validation_accuracy": accuracy,
+        "ai_sensor_match_count": ai_sensor_match_count,
+        "ai_sensor_mismatch_count": ai_sensor_mismatch_count,
+        "ai_sensor_unknown_count": ai_sensor_unknown_count,
+        "ai_sensor_accuracy": ai_sensor_accuracy,
         "validation_note": note,
         "representative_rows": representative_rows,
         "representative_images": [row.image_url for _, row in representative_rows],
@@ -478,9 +490,17 @@ def validation_status_text(row: ValidationRecord) -> str:
     else:
         result = "판별 불가"
 
+    if row.ai_sensor_match is True:
+        ai_result = "AI-센서 일치"
+    elif row.ai_sensor_match is False:
+        ai_result = "AI-센서 불일치"
+    else:
+        ai_result = "AI-센서 판별 불가"
+
     sensor = row.sensor_predicted_status or "센서 상태 없음"
     observed = row.observed_surface_status or "관찰 상태 없음"
-    return f"촬영일: {row.record_date} / 센서 상태: {sensor} / 관찰 상태: {observed} / 검증 결과: {result}"
+    ai = row.ai_predicted_status or "AI 분석 없음"
+    return f"촬영일: {row.record_date} / 센서 상태: {sensor} / 관찰 상태: {observed} / AI 상태: {ai} / 센서-관찰 검증: {result} / {ai_result}"
 
 
 # ---------------------------
@@ -567,6 +587,9 @@ def get_mrv_reports(field_id: int | None = Query(default=None), db: Session = De
             "validation_sample_count": validation["validation_sample_count"],
             "validation_match_count": validation["validation_match_count"],
             "validation_accuracy": validation["validation_accuracy"],
+            "ai_sensor_match_count": validation["ai_sensor_match_count"],
+            "ai_sensor_mismatch_count": validation["ai_sensor_mismatch_count"],
+            "ai_sensor_accuracy": validation["ai_sensor_accuracy"],
             "validation_note": validation["validation_note"],
             "created_at": report.created_at,
         })
@@ -868,14 +891,19 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
                 ["일치 수", f"{validation['validation_match_count']}건"],
                 ["불일치 수", f"{validation['validation_mismatch_count']}건"],
                 ["판별 불가", f"{validation['validation_unknown_count']}건"],
-                ["검증 정확도", f"{validation['validation_accuracy']}%"],
+                ["센서-관찰 검증 정확도", f"{validation['validation_accuracy']}%"],
+                ["AI-센서 일치 수", f"{validation['ai_sensor_match_count']}건"],
+                ["AI-센서 불일치 수", f"{validation['ai_sensor_mismatch_count']}건"],
+                ["AI-센서 판별 불가", f"{validation['ai_sensor_unknown_count']}건"],
+                ["AI-센서 일치율", f"{validation['ai_sensor_accuracy']}%"],
             ],
             [160, 260], regular_font, bold_font,
         )
         y = draw_text(
             pdf,
             "검증 결과는 센서 기반 상태 판정의 신뢰성을 확인하기 위한 보조 자료로 활용된다. "
-            "일부 불일치 사례는 촬영 시점과 센서 측정 시점 간 차이 또는 수위 경계 구간에서의 판단 차이에 의해 발생할 수 있다.",
+            "일부 불일치 사례는 촬영 시점과 센서 측정 시점 간 차이 또는 수위 경계 구간에서의 판단 차이에 의해 발생할 수 있다. "
+            "AI 분석 결과 중 'UNKNOWN'으로 판정된 데이터는 정확도 산정에서 제외하였다.",
             LEFT_X, y, max_text_width, regular_font,
         )
     else:
@@ -1125,7 +1153,11 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     row = put_kv(summary_sheet, row, "검증 방법", validation["validation_method"], "A{row}:B{row}", "C{row}:H{row}")
     row = put_kv(summary_sheet, row, "샘플 수", f"{validation['validation_sample_count']}건", "A{row}:B{row}", "C{row}:H{row}")
     row = put_kv(summary_sheet, row, "일치 / 불일치", f"{validation['validation_match_count']}건 / {validation['validation_mismatch_count']}건", "A{row}:B{row}", "C{row}:H{row}")
-    row = put_kv(summary_sheet, row, "검증 정확도", f"{validation['validation_accuracy']}%", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "센서-관찰 검증 정확도", f"{validation['validation_accuracy']}%", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "AI-센서 일치", f"{validation['ai_sensor_match_count']}건", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "AI-센서 불일치", f"{validation['ai_sensor_mismatch_count']}건", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "AI-센서 판별 불가", f"{validation['ai_sensor_unknown_count']}건", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "AI-센서 일치율", f"{validation['ai_sensor_accuracy']}%", "A{row}:B{row}", "C{row}:H{row}")
 
     row += 1
     row = put_section_title(summary_sheet, row, "5. 결론 및 향후 계획")
@@ -1266,15 +1298,15 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     # -----------------------------
     validation_sheet = workbook.create_sheet(title="검증 상세")
     validation_sheet.sheet_view.showGridLines = False
-    set_widths(validation_sheet, {"A": 14, "B": 18, "C": 20, "D": 20, "E": 14, "F": 45, "G": 30})
-    validation_sheet.merge_cells("A1:G1")
+    set_widths(validation_sheet, {"A": 14, "B": 18, "C": 20, "D": 20, "E": 14, "F": 20, "G": 18, "H": 45, "I": 30})
+    validation_sheet.merge_cells("A1:I1")
     validation_sheet["A1"] = "검증 상세"
     validation_sheet["A1"].font = title_font
     validation_sheet["A1"].alignment = center
     validation_sheet.row_dimensions[1].height = 30
     validation_sheet.append([])
-    validation_sheet.append(["날짜", "노드 ID", "센서 상태", "관찰 상태", "일치 여부", "이미지 URL", "비고"])
-    style_range(validation_sheet, "A3:G3", fill=header_fill, font=header_font, alignment=center)
+    validation_sheet.append(["날짜", "노드 ID", "센서 상태", "관찰 상태", "센서-관찰", "AI 상태", "AI-센서", "이미지 URL", "비고"])
+    style_range(validation_sheet, "A3:I3", fill=header_fill, font=header_font, alignment=center)
 
     if validation_rows:
         for row_data in validation_rows:
@@ -1284,22 +1316,32 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
                 match_text = "불일치"
             else:
                 match_text = "판별 불가"
+
+            if row_data.ai_sensor_match is True:
+                ai_sensor_text = "일치"
+            elif row_data.ai_sensor_match is False:
+                ai_sensor_text = "불일치"
+            else:
+                ai_sensor_text = "판별 불가"
+
             validation_sheet.append([
                 str(row_data.record_date),
                 row_data.node_id,
                 row_data.sensor_predicted_status,
                 row_data.observed_surface_status,
                 match_text,
+                row_data.ai_predicted_status,
+                ai_sensor_text,
                 row_data.image_url,
                 row_data.note,
             ])
     else:
-        validation_sheet.append(["검증 데이터 없음", "", "", "", "", "", ""])
+        validation_sheet.append(["검증 데이터 없음", "", "", "", "", "", "", "", ""])
 
-    for row_cells in validation_sheet.iter_rows(min_row=4, max_row=validation_sheet.max_row, min_col=1, max_col=7):
+    for row_cells in validation_sheet.iter_rows(min_row=4, max_row=validation_sheet.max_row, min_col=1, max_col=9):
         for cell in row_cells:
             cell.font = body_font
-            cell.alignment = left if cell.column in (6, 7) else center
+            cell.alignment = left if cell.column in (8, 9) else center
             cell.border = border
 
     for sheet in workbook.worksheets:

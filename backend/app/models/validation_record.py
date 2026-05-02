@@ -33,5 +33,9 @@ class ValidationRecord(Base):
 
     # 센서 상태와 사진 관찰 결과의 일치 여부
     is_match = Column(Boolean, nullable=True)
+
+    # 센서 상태와 AI 분석 결과의 일치 여부
+    # 단, is_match가 True인 검증 데이터에서만 계산한다.
+    ai_sensor_match = Column(Boolean, nullable=True)
     note = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

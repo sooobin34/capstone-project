@@ -1,7 +1,7 @@
 import base64
 import json
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -13,6 +13,7 @@ from app.api.deps import get_db
 from app.models.awd_daily_summary import AwdDailySummary
 from app.models.field import Field
 from app.models.iot_node import IotNode
+from app.models.sensor_log import SensorLog
 from app.models.validation_record import ValidationRecord
 from app.schemas.validation_record import (
     ValidationAnalyzeRequest,
@@ -62,8 +63,73 @@ def normalize_surface_status(status: str | None) -> str | None:
 
     return normalized
 
-# ✅ 센서 상태는 daily_summary에서만 가져옴
-def get_sensor_status(db: Session, node_id: int | None, record_date: date):
+def normalize_dt(dt: datetime) -> datetime:
+    # DB/입력값의 timezone aware/naive 차이로 비교 오류가 나는 것을 방지한다.
+    return dt.replace(tzinfo=None)
+
+
+def water_level_to_surface_status(inner_water_level) -> str | None:
+    if inner_water_level is None:
+        return None
+
+    value = float(inner_water_level)
+    if value >= 0:
+        return "WATER_VISIBLE"
+    return "NO_WATER_VISIBLE"
+
+
+def daily_status_to_surface_status(sensor_status: str | None) -> str | None:
+    if not sensor_status:
+        return None
+    if sensor_status in SURFACE_STATUS_VALUES:
+        return sensor_status
+    return SENSOR_TO_SURFACE_STATUS.get(sensor_status)
+
+
+def get_nearest_sensor_log(
+    db: Session,
+    node_id: int | None,
+    captured_at: datetime | None,
+    window_hours: int = 3,
+) -> SensorLog | None:
+    if node_id is None or captured_at is None:
+        return None
+
+    target = normalize_dt(captured_at)
+    start_at = target - timedelta(hours=window_hours)
+    end_at = target + timedelta(hours=window_hours)
+
+    candidates = (
+        db.query(SensorLog)
+        .filter(
+            SensorLog.node_id == node_id,
+            SensorLog.measured_at >= start_at,
+            SensorLog.measured_at <= end_at,
+        )
+        .all()
+    )
+
+    if not candidates:
+        return None
+
+    return min(
+        candidates,
+        key=lambda row: abs((normalize_dt(row.measured_at) - target).total_seconds()),
+    )
+
+
+def get_sensor_status(
+    db: Session,
+    node_id: int | None,
+    record_date: date,
+    captured_at: datetime | None = None,
+):
+    # 1순위: captured_at 기준 근접 sensor_log의 cm 값을 물 보임/안 보임으로 변환
+    nearest_log = get_nearest_sensor_log(db, node_id, captured_at)
+    if nearest_log:
+        return water_level_to_surface_status(nearest_log.inner_water_level)
+
+    # 2순위: captured_at이 없거나 근접 로그가 없으면 기존 daily_summary 방식으로 fallback
     if node_id is None:
         return None
 
@@ -78,19 +144,41 @@ def get_sensor_status(db: Session, node_id: int | None, record_date: date):
     )
 
     if summary:
-        return summary.daily_status
+        return daily_status_to_surface_status(summary.daily_status)
 
     return None
+
 
 def calculate_match(sensor_status: str | None, observed_status: str | None):
     if not sensor_status or not observed_status or observed_status == "UNKNOWN":
         return None
 
-    expected = SENSOR_TO_SURFACE_STATUS.get(sensor_status)
-    if expected is None:
+    expected = daily_status_to_surface_status(sensor_status)
+    if expected is None or expected == "UNKNOWN":
         return None
 
     return expected == observed_status
+
+
+def calculate_ai_sensor_match(
+    sensor_status: str | None,
+    ai_status: str | None,
+    sensor_observed_match: bool | None,
+):
+    # 센서-사람 검증이 True인 데이터만 AI-센서 비교 대상으로 사용한다.
+    if sensor_observed_match is not True:
+        return None
+
+    sensor_surface_status = daily_status_to_surface_status(sensor_status)
+    if (
+        not sensor_surface_status
+        or not ai_status
+        or sensor_surface_status == "UNKNOWN"
+        or ai_status == "UNKNOWN"
+    ):
+        return None
+
+    return sensor_surface_status == ai_status
 
 def build_ai_note(result: dict) -> str:
     confidence = result.get("confidence")
@@ -142,7 +230,7 @@ def create_validation(payload: ValidationRecordCreate, db: Session = Depends(get
     ensure_node_exists(db, payload.node_id)
 
     observed = normalize_surface_status(payload.observed_surface_status)
-    sensor = get_sensor_status(db, payload.node_id, payload.record_date)
+    sensor = get_sensor_status(db, payload.node_id, payload.record_date, payload.captured_at)
 
     record = ValidationRecord(
         field_id=payload.field_id,
@@ -204,7 +292,7 @@ async def upload_validation(
     image_url = str(request.base_url).rstrip("/") + f"/uploads/validation_records/{filename}"
 
     observed = normalize_surface_status(observed_surface_status)
-    sensor = get_sensor_status(db, node_id, record_date)
+    sensor = get_sensor_status(db, node_id, record_date, captured_at)
 
     record = ValidationRecord(
         field_id=field_id,
@@ -270,18 +358,28 @@ def get_validation_summary(
 
     all_records = query.all()
     valid_records = [r for r in all_records if r.is_match is not None]
+    ai_sensor_records = [r for r in all_records if r.ai_sensor_match is not None]
 
     total = len(all_records)
     matched = sum(1 for r in valid_records if r.is_match)
+    mismatched = sum(1 for r in valid_records if r.is_match is False)
+
+    ai_sensor_matched = sum(1 for r in ai_sensor_records if r.ai_sensor_match)
+    ai_sensor_mismatched = sum(1 for r in ai_sensor_records if r.ai_sensor_match is False)
 
     accuracy = round((matched / len(valid_records)) * 100, 2) if valid_records else None
+    ai_sensor_accuracy = round((ai_sensor_matched / len(ai_sensor_records)) * 100, 2) if ai_sensor_records else None
 
     return success_response(
         {
             "field_id": field_id,
             "total_validation_count": total,
             "match_count": matched,
+            "mismatch_count": mismatched,
             "validation_accuracy": accuracy,
+            "ai_sensor_match_count": ai_sensor_matched,
+            "ai_sensor_mismatch_count": ai_sensor_mismatched,
+            "ai_sensor_accuracy": ai_sensor_accuracy,
         },
         "Validation summary loaded.",
     )
@@ -328,11 +426,17 @@ def update_validation(
         db,
         record.node_id,
         record.record_date,
+        record.captured_at,
     )
 
     record.is_match = calculate_match(
         record.sensor_predicted_status,
         record.observed_surface_status,
+    )
+    record.ai_sensor_match = calculate_ai_sensor_match(
+        record.sensor_predicted_status,
+        record.ai_predicted_status,
+        record.is_match,
     )
 
     db.commit()
@@ -433,6 +537,11 @@ Return JSON only:
     if payload is None or payload.save_result:
         record.ai_predicted_status = ai_status
         record.ai_confidence = result.get("confidence")
+        record.ai_sensor_match = calculate_ai_sensor_match(
+            record.sensor_predicted_status,
+            ai_status,
+            record.is_match,
+        )
 
         # ❌ note 덮어쓰기 제거 (중요)
         # record.note = build_ai_note(result)

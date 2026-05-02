@@ -59,6 +59,7 @@ class ValidationRecordRead(BaseModel):
     ai_confidence: float | None = None
 
     is_match: bool | None = None
+    ai_sensor_match: bool | None = None
     note: str | None = None
     created_at: datetime
 
