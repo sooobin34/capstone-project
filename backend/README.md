@@ -21,6 +21,7 @@
 
 - IoT 센서 노드 등록 및 상태 조회
 - 센서 수위 데이터 저장 및 조회
+- LoRaWAN 게이트웨이 uplink payload 수신 및 sensor_logs 자동 저장
 - 24시간 수위 통계 집계 (평균/최대/최소)
 - 임계 수위 기반 알림 자동 생성
 - 알림 필터링 및 24시간 알람 건수 조회
@@ -44,6 +45,7 @@ backend
  ┃ ┣ api
  ┃ ┃ ┣ nodes.py
  ┃ ┃ ┣ sensor_logs.py
+ ┃ ┃ ┣ lora_webhook.py
  ┃ ┃ ┣ alerts.py
  ┃ ┃ ┣ daily_summaries.py
  ┃ ┃ ┣ mrv_reports.py
@@ -189,6 +191,8 @@ backend
 
 - POST /sensor-logs : 센서 로그 저장
 
+- POST /lora-webhook : LoRaWAN 게이트웨이 JSON 수신 후 Base64 payload를 센서 로그로 변환 저장
+
 - GET /sensor-logs/node/{node_id} : 특정 노드 로그 조회
 
 - GET /sensor-logs/node/{node_id}?start=YYYY-MM-DD&end=YYYY-MM-DD : 기간별 로그 조회
@@ -319,6 +323,24 @@ backend
 ### 검증 정확도 계산식
 
 - validation_accuracy = validation_match_count / validation_sample_count * 100
+
+### LoRaWAN webhook 처리
+
+- POST /lora-webhook: LoRaWAN 게이트웨이 uplink JSON을 수신하여 sensor_logs에 저장합니다.
+- devEUI는 iot_nodes.mac_address와 매칭합니다.
+- data는 Base64 payload이고 현재는 첫 2바이트를 수위값(mm)으로 해석합니다.
+- 실제 펌웨어 payload 포맷에 따라 파싱 로직은 조정될 수 있습니다.
+
+LoRaWAN webhook 요청 예시:
+
+```json
+{
+  "devEUI": "0080E115061BF02C",
+  "fPort": 1,
+  "data": "AHs=",
+  "time": "2026-05-02T23:00:00+09:00"
+}
+```
 
 ### OpenAI Vision 분석
 
@@ -472,6 +494,7 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 ### 2) 센서 데이터 및 알림
 - Mock Sensor 연동 테스트 완료
 - 센서 로그 저장 및 조회 테스트 완료
+- LoRaWAN webhook 수신 및 sensor_logs 저장 테스트 완료
 - 기간별 로그 조회 테스트 완료
 - 24시간 수위 통계 API 테스트 완료
 - 알림 자동 생성 테스트 완료
@@ -500,6 +523,7 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 - 백엔드 API 구현 진행 중
 - Render 배포 서버 운영 중
 - validation_records 테이블 추가 완료, MRV 검증 데이터 연동 예정
+- LoRaWAN webhook API 추가 완료, DevEUI 기반 노드 매핑 및 sensor_logs 저장 지원
 - 프론트 연동 진행 중
 - MRV PDF / Excel 보고서 형식 보강 완료
 
