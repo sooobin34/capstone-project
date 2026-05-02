@@ -36,6 +36,7 @@ backend
  ┃ ┣ api
  ┃ ┃ ┣ nodes.py
  ┃ ┃ ┣ sensor_logs.py
+ ┃ ┃ ┣ lora_webhook.py
  ┃ ┃ ┣ alerts.py
  ┃ ┃ ┣ daily_summaries.py
  ┃ ┃ ┣ mrv_reports.py
@@ -160,6 +161,8 @@ backend
 ### 센서 로그
 
 - POST /sensor-logs : 센서 로그 저장
+
+- POST /lora-webhook : LoRaWAN 게이트웨이 Base64 payload를 센서 로그로 변환 저장
 
 - GET /sensor-logs/node/{node_id} : 특정 노드 로그 조회
 

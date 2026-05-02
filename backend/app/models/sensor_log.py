@@ -7,7 +7,7 @@ from app.core.database import Base
 class SensorLog(Base):
     __tablename__ = "sensor_logs"
 
-    id = Column(BigInteger, primary_key=True, index=True)
+    id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, index=True)
     node_id = Column(Integer, ForeignKey("iot_nodes.id"), nullable=False)
 
     inner_water_level = Column(Numeric(5, 2), nullable=False)
