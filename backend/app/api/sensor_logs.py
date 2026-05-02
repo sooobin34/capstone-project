@@ -16,8 +16,7 @@ LOW_WATER_THRESHOLD = -15.0
 HIGH_WATER_THRESHOLD = 5.0
 
 
-@router.post("")
-def create_sensor_log(payload: SensorLogCreate, db: Session = Depends(get_db)):
+def save_sensor_log(payload: SensorLogCreate, db: Session):
     node = db.query(IotNode).filter(IotNode.id == payload.node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
@@ -77,6 +76,11 @@ def create_sensor_log(payload: SensorLogCreate, db: Session = Depends(get_db)):
             db.commit()
 
     return success_response(sensor_log, "센서 로그 저장 성공")
+
+
+@router.post("")
+def create_sensor_log(payload: SensorLogCreate, db: Session = Depends(get_db)):
+    return save_sensor_log(payload, db)
 
 
 @router.get("/node/{node_id}")
