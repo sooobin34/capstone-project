@@ -153,5 +153,10 @@ export const analyzeValidationRecord = async (recordId: number) => {
   return (res.data as any).data
 }
 
+export const updateMrvReportStatus = async (reportId: number, status: string) => {
+  const res = await api.patch(`/mrv-reports/${reportId}/status`, { status })
+  return (res.data as any).data
+}
+
 export const downloadValidationRecord = (recordId: number) =>
   `https://capstone-project-54l6.onrender.com/validations/${recordId}/download`

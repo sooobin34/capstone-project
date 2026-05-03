@@ -128,7 +128,7 @@ export default function MrvPage() {
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px', color: '#aaa', fontSize: '14px' }}>보고서가 없습니다</div>
       ) : (
-        <MrvReportList reports={filtered} />
+        <MrvReportList reports={filtered} onStatusChange={() => getMrvReports(selectedFieldId ? Number(selectedFieldId) : undefined).then(setReports)} />
       )}
     </div>
   )

@@ -7,9 +7,24 @@ const SURFACE_STATUS_OPTIONS = [
   { label: '애매함', value: 'UNKNOWN' },
 ]
 
-const ANGLE_OPTIONS = ['정면', '좌측45도', '우측45도', '위에서촬영', '낮은시점', '기타']
-const DISTANCE_OPTIONS = ['근접', '중간거리', '원거리', '전체구역', '기타']
+const ANGLE_OPTIONS = ['정면', '좌측', '우측', '위', '아래', '기타']
+const DISTANCE_OPTIONS = ['근접', '중간', '멀리', '전체', '기타']
 const CONDITION_OPTIONS = ['햇빛 강함', '그림자 있음', '물 반사 있음', '흙 젖음', '흐림', '화질 흐림', '수초·벼 가림', '기타']
+//추가
+const STATUS_LABEL_MAP: Record<string, string> = {
+  WATER_VISIBLE: '물 보임',
+  NO_WATER_VISIBLE: '물 안 보임',
+  UNKNOWN: '애매함',
+}
+
+
+function createImageTitle(observedStatus: string, angle: string, distance: string) {
+  const statusLabel = STATUS_LABEL_MAP[observedStatus] ?? '상태미정'
+  const parts = [statusLabel]
+  if (angle) parts.push(angle)
+  if (distance) parts.push(distance)
+  return parts.join('_')
+}
 
 const FIELD_ID = 1
 const NODE_ID = 7
@@ -37,6 +52,9 @@ export default function ValidationPage() {
   const [records, setRecords] = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
   const [analyzingId, setAnalyzingId] = useState<number | null>(null)
+  const [modalImage, setModalImage] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterDate, setFilterDate] = useState('')
 
   const fetchLatestLog = async () => {
     setLogLoading(true)
@@ -63,6 +81,9 @@ export default function ValidationPage() {
       setSummary(data)
     } catch { }
   }
+  const filteredRecords = records
+  .filter(r => filterStatus ? r.observed_surface_status === filterStatus : true)
+  .filter(r => filterDate ? r.record_date === filterDate : true)
 
   useEffect(() => {
     fetchLatestLog()
@@ -102,10 +123,15 @@ export default function ValidationPage() {
     try {
       const now = new Date()
       const formData = new FormData()
+      //추가
+      const autoTitle = createImageTitle(observedStatus, angle, distance)
       formData.append('field_id', String(FIELD_ID))
       formData.append('node_id', String(NODE_ID))
       formData.append('record_date', now.toISOString().split('T')[0])
+      formData.append('captured_at', now.toISOString())
       formData.append('observed_surface_status', observedStatus)
+      //추가
+      formData.append('image_title', autoTitle)
       formData.append('note', buildNote())
       formData.append('file', file)
 
@@ -305,22 +331,52 @@ export default function ValidationPage() {
             </div>
           )}
 
-          {/* 3. 검증 사진 목록 */}
-          <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>
-            <p style={{ fontSize: '12px', color: '#888', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0' }}>
-              검증 기록 총 {records.length}건
-            </p>
-            {records.length === 0 ? (
-              <p style={{ fontSize: '13px', color: '#aaa', padding: '24px 0', textAlign: 'center' }}>검증 기록이 없습니다</p>
-            ) : (
-              records.map((record, i) => (
-                <div key={record.id} style={{
-                  display: 'flex', gap: '12px', alignItems: 'flex-start',
-                  padding: '12px 0', borderBottom: i < records.length - 1 ? '0.5px solid #f0f0f0' : 'none',
-                }}>
-                  {record.image_url && (
-                    <img src={record.image_url} alt="검증사진" style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
-                  )}
+{/* 3. 검증 사진 목록 */}
+<div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>
+  {/* 필터 */}
+  <div style={{ display: 'flex', gap: '8px', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0', flexWrap: 'wrap' }}>
+    <select
+      value={filterStatus}
+      onChange={(e) => setFilterStatus(e.target.value)}
+      style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }}
+    >
+      <option value="">전체 상태</option>
+      {SURFACE_STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+    </select>
+    <input
+      type="date"
+      value={filterDate}
+      onChange={(e) => setFilterDate(e.target.value)}
+      style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }}
+    />
+    {(filterStatus || filterDate) && (
+      <button
+        onClick={() => { setFilterStatus(''); setFilterDate('') }}
+        style={{ fontSize: '12px', padding: '5px 10px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', color: '#888' }}
+      >
+        초기화
+      </button>
+    )}
+  </div>
+  <p style={{ fontSize: '12px', color: '#888', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0' }}>
+    검증 기록 총 {filteredRecords.length}건
+  </p>
+  {filteredRecords.length === 0 ? (
+    <p style={{ fontSize: '13px', color: '#aaa', padding: '24px 0', textAlign: 'center' }}>검증 기록이 없습니다</p>
+  ) : (
+    filteredRecords.map((record, i) => (
+      <div key={record.id} style={{
+        display: 'flex', gap: '12px', alignItems: 'flex-start',
+        padding: '12px 0', borderBottom: i < filteredRecords.length - 1 ? '0.5px solid #f0f0f0' : 'none',
+      }}>
+        {record.image_url && (
+          <img
+            src={record.image_url}
+            alt="검증사진"
+            onClick={() => setModalImage(record.image_url)}
+            style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0, cursor: 'pointer' }}
+          />
+        )}
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                       <p style={{ fontSize: '13px', fontWeight: 500 }}>
@@ -365,6 +421,23 @@ export default function ValidationPage() {
           </div>
         </>
       )}
+      {modalImage && (
+  <div
+    onClick={() => setModalImage(null)}
+    style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      cursor: 'pointer',
+    }}
+  >
+    <img
+      src={modalImage}
+      alt="크게보기"
+      style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '12px' }}
+    />
+  </div>
+)}
     </div>
   )
 }
