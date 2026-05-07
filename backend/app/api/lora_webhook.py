@@ -1,4 +1,5 @@
 import base64
+import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
@@ -122,6 +123,12 @@ def get_measured_at(payload: LoRaWebhookPayload) -> datetime:
 
 @router.post("")
 def receive_lora_webhook(payload: LoRaWebhookPayload, db: Session = Depends(get_db)):
+    print(
+        "LORA_WEBHOOK_INCOMING",
+        json.dumps(payload.model_dump(by_alias=True), default=str, ensure_ascii=False),
+        flush=True,
+    )
+
     raw_payload = parse_raw_payload(payload)
     if raw_payload is None:
         return success_response(
