@@ -161,6 +161,14 @@ async def receive_lora_webhook(
     measured_at = get_measured_at(payload)
     water_level_cm = parse_water_level_cm(raw_payload)
 
+    print("LORA_DECODED", {
+    "dev_eui": dev_eui,
+    "node_id": node.id if node else None,
+    "raw_payload_hex": raw_payload.hex(),
+    "water_level_cm": str(water_level_cm),
+    "measured_at": str(measured_at),
+    }, flush=True)
+    
     sensor_log_payload = SensorLogCreate(
         node_id=node.id,
         inner_water_level=water_level_cm,
