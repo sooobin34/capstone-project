@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
+from fastapi import Request
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
@@ -122,7 +123,20 @@ def get_measured_at(payload: LoRaWebhookPayload) -> datetime:
 
 
 @router.post("")
-def receive_lora_webhook(payload: LoRaWebhookPayload, db: Session = Depends(get_db)):
+async def receive_lora_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    raw_body = await request.json()
+
+    print(
+        "LORA_WEBHOOK_RAW_BODY",
+        json.dumps(raw_body, ensure_ascii=False),
+        flush=True,
+    )
+
+    payload = LoRaWebhookPayload.model_validate(raw_body)
+
     print(
         "LORA_WEBHOOK_INCOMING",
         json.dumps(payload.model_dump(by_alias=True), default=str, ensure_ascii=False),
