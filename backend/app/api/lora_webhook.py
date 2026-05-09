@@ -144,14 +144,22 @@ async def receive_lora_webhook(
     )
 
     raw_payload = parse_raw_payload(payload)
-    if raw_payload is None:
-        return success_response(
-            {
-                "event_type": payload.event_type,
-                "dev_eui": get_payload_deveui(payload),
-            },
-            "LoRa webhook event ignored because it has no uplink payload.",
-        )
+
+if raw_payload is None:
+    print("LORA_IGNORED_NO_PAYLOAD", {
+        "dev_eui": get_payload_deveui(payload),
+        "event_type": payload.event_type,
+        "f_port": payload.f_port,
+        "timestamp": payload.timestamp,
+    }, flush=True)
+
+    return success_response(
+        {
+            "event_type": payload.event_type,
+            "dev_eui": get_payload_deveui(payload),
+        },
+        "LoRa webhook event ignored because it has no uplink payload.",
+    )
 
     dev_eui = get_payload_deveui(payload)
     node = find_node_by_deveui(db, dev_eui)
