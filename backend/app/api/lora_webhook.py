@@ -178,7 +178,12 @@ async def receive_lora_webhook(
     )
     sensor_log_response = save_sensor_log(sensor_log_payload, db)
 
-    print("LORA_DB_SAVED", sensor_log_response, flush=True)
+    print(
+    f"LORA_DB_SAVED_OK node_id={node.id} "
+    f"water_level_cm={water_level_cm} "
+    f"measured_at={measured_at}",
+    flush=True,
+    )
 
     return success_response(
         {
