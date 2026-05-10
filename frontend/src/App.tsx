@@ -35,7 +35,7 @@ export default function App() {
             justifyContent: 'space-between',
           }}>
             <NavLink to="/map" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-              <img src={logo} alt="AquaPaddy" style={{ height: '40px', objectFit: 'contain' }} />
+              <img src={logo} alt="AquaPaddy" style={{ height: '61px', objectFit: 'contain' }} />
             </NavLink>
             <div style={{ display: 'flex', gap: '8px' }}>
               {navItems.map((item) => (

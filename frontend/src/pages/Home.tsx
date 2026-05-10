@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import WaterLevelCard from '../components/dashboard/WaterLevelCard'
 import TrendChart from '../components/dashboard/TrendChart'
 import AlarmSummaryCard from '../components/dashboard/AlarmSummaryCard'
 import MrvSummaryCard from '../components/dashboard/MrvSummaryCard'
@@ -17,8 +16,6 @@ export default function Home() {
   const [nodes, setNodes] = useState<any[]>([])
   const [selectedFieldId, setSelectedFieldId] = useState<number | ''>('')
   const [selectedNodeId, setSelectedNodeId] = useState<number | ''>('')
-
-  // 선택된 노드 기준 데이터
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
   const [selectedAlerts, setSelectedAlerts] = useState<any[]>([])
@@ -51,7 +48,6 @@ export default function Home() {
   useEffect(() => {
     if (selectedFieldId) {
       getNodes(Number(selectedFieldId)).then(setNodes).catch(console.error)
-      // 논 선택 시 알람 조회
       getAlerts(Number(selectedFieldId)).then(alerts => {
         setSelectedAlerts(alerts.slice(0, 3))
         setSelectedAlertTotal(alerts.length)
@@ -70,12 +66,10 @@ export default function Home() {
 
   useEffect(() => {
     if (selectedNodeId) {
-      // 노드 선택 시 현재 수위 조회
       getNodeStatus(Number(selectedNodeId)).then(status => {
         setSelectedLevel(status?.latest_log?.inner_water_level ?? null)
         setSelectedStatus(status?.current_status ?? null)
       }).catch(console.error)
-      // 노드 선택 시 그래프 조회
       getSensorLogsRange(Number(selectedNodeId), '1d').then(logs => {
         setChartData(logs.map((l: any) => l.inner_water_level))
         setChartLabels(logs.map((l: any) =>
@@ -91,7 +85,6 @@ export default function Home() {
     }
   }, [selectedNodeId])
 
-  // 현재 수위/상태: 노드 선택 시 선택 기준, 아니면 대시보드 기준
   const latestLevel = selectedLevel !== null
     ? selectedLevel
     : dashboard?.latest_daily_summary?.avg_inner_level
@@ -110,7 +103,6 @@ export default function Home() {
       ? `Node ${dashboard.latest_daily_summary.node_id}`
       : '-'
 
-  // 알람: 논 선택 시 선택 기준, 아니면 대시보드 기준
   const alertTotal = selectedAlertTotal !== null ? selectedAlertTotal : dashboard?.total_alerts ?? 0
   const alertUnresolved = selectedAlertUnresolved !== null ? selectedAlertUnresolved : dashboard?.unresolved_alerts ?? 0
   const recentAlerts = selectedAlerts.length > 0 ? selectedAlerts : dashboard?.recent_alerts ?? []
@@ -135,6 +127,11 @@ export default function Home() {
       })()
     : '-'
 
+  const statusColorMap: Record<string, string> = {
+    과담수: '#1565c0', 담수: '#1D9E75', 건조중: '#BA7517', 건조: '#E24B4A', '데이터 없음': '#aaa'
+  }
+  const statusColor = statusColorMap[latestStatus] ?? '#aaa'
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 48px)', color: '#aaa', fontSize: '14px' }}>
       불러오는 중...
@@ -144,12 +141,12 @@ export default function Home() {
   return (
     <div style={{
       padding: '12px 24px',
-      maxWidth: '1200px',
+      maxWidth: '1400px',
       margin: '0 auto',
       height: 'calc(100vh - 48px)',
       display: 'grid',
-      gridTemplateColumns: '1fr 2fr 1fr',
-      gridTemplateRows: 'auto 1fr',
+      gridTemplateColumns: '1fr 1.2fr 1.5fr',
+      gridTemplateRows:'auto 1fr',
       gap: '10px',
       boxSizing: 'border-box',
       overflow: 'hidden',
@@ -171,32 +168,47 @@ export default function Home() {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
+            alignItems: 'flex-start',
           }}>
-            <p style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>{card.label}</p>
-            <p style={{ fontSize: '16px', fontWeight: 500, color: card.danger ? '#c62828' : '#222' }}>{card.value}</p>
+            <p style={{ fontSize: '11px', color: '#888', marginBottom: '6px' }}>{card.label}</p>
+            <p style={{ fontSize: '20px', fontWeight: 500, color: card.danger ? '#c62828' : '#222' }}>{card.value}</p>
           </div>
         ))}
       </div>
 
       {/* 중앙 상단: 현재수위 + 24시간통계 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        <WaterLevelCard
-          level={latestLevel}
-          status={latestStatus}
-          fieldName={fieldName}
-        />
-        <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px' }}>
+      <div style={{
+        background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px',
+      }}>
+        {/* 현재 수위 */}
+        <div>
+          <p style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>현재 수위 · {fieldName}</p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '32px', fontWeight: 500 }}>{latestLevel > 0 ? `+${latestLevel}` : latestLevel}</span>
+            <span style={{ fontSize: '14px', color: '#888' }}>cm</span>
+          </div>
+          <span style={{
+            display: 'inline-block', fontSize: '12px', padding: '3px 10px', borderRadius: '20px', fontWeight: 500,
+            background: statusColor + '20', color: statusColor,
+          }}>{latestStatus}</span>
+        </div>
+
+        <div style={{ height: '0.5px', background: '#e0e0e0' }} />
+
+        {/* 24시간 통계 */}
+        <div>
           <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>24시간 통계</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
             {[
               { label: '평균', value: `${dashboard?.latest_daily_summary?.avg_inner_level ?? 0}cm` },
               { label: '최고', value: `${dashboard?.latest_daily_summary?.max_inner_level ?? 0}cm` },
               { label: '최저', value: `${dashboard?.latest_daily_summary?.min_inner_level ?? 0}cm` },
               { label: '알람', value: `${alertUnresolved}건` },
             ].map((item) => (
-              <div key={item.label} style={{ background: '#f5f5f5', borderRadius: '8px', padding: '6px 10px' }}>
-                <p style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>{item.label}</p>
-                <p style={{ fontSize: '14px', fontWeight: 500 }}>{item.value}</p>
+              <div key={item.label} style={{ background: '#f5f5f5', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <p style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>{item.label}</p>
+                <p style={{ fontSize: '15px', fontWeight: 500 }}>{item.value}</p>
               </div>
             ))}
           </div>
@@ -204,12 +216,15 @@ export default function Home() {
       </div>
 
       {/* 우측 상단: 논/노드 드롭다운 + 지도 */}
-      <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{
+        background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px',
+        display: 'flex', flexDirection: 'column', gap: '8px',
+      }}>
         <div style={{ display: 'flex', gap: '6px' }}>
           <select
             value={selectedFieldId}
             onChange={(e) => { setSelectedFieldId(e.target.value ? Number(e.target.value) : ''); setSelectedNodeId('') }}
-            style={{ flex: 1, fontSize: '11px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
+            style={{ flex: 1, fontSize: '12px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
           >
             <option value="">논 선택</option>
             {fields.map((f) => <option key={f.id} value={f.id}>{f.field_name}</option>)}
@@ -217,13 +232,13 @@ export default function Home() {
           <select
             value={selectedNodeId}
             onChange={(e) => setSelectedNodeId(e.target.value ? Number(e.target.value) : '')}
-            style={{ flex: 1, fontSize: '11px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
+            style={{ flex: 1, fontSize: '12px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
           >
             <option value="">노드 선택</option>
             {nodes.map((n) => <option key={n.id} value={n.id}>Node {n.id}</option>)}
           </select>
         </div>
-        <div style={{ height: '160px', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ flex: 1, borderRadius: '8px', overflow: 'hidden', minHeight: 0 }}>
           {fields.length > 0 ? (
             <FieldMap
               sensors={[]}
@@ -244,7 +259,7 @@ export default function Home() {
       </div>
 
       {/* 좌측 하단: 알람요약 */}
-      <div style={{ overflow: 'hidden' }}>
+      <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <AlarmSummaryCard
           totalCount={alertTotal}
           unresolvedCount={alertUnresolved}
@@ -252,20 +267,23 @@ export default function Home() {
         />
       </div>
 
-      {/* 중앙 하단: 그래프 */}
-      <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>수위 추이 (24시간)</p>
-        <div style={{ flex: 1, minHeight: 0 }}>
-          <TrendChart data={chartData} labels={chartLabels} />
-        </div>
-      </div>
-
-      {/* 우측 하단: MRV 요약 */}
-      <div style={{ overflow: 'hidden' }}>
+      {/* 중앙 하단: MRV 요약 */}
+      <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <MrvSummaryCard
           report={latestMrv}
           onNavigate={() => navigate('/mrv')}
         />
+      </div>
+
+      {/* 우측 하단: 수위 추이 그래프 */}
+      <div style={{
+        background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px',
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      }}>
+        <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>수위 추이 (24시간)</p>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <TrendChart data={chartData} labels={chartLabels} />
+        </div>
       </div>
 
     </div>

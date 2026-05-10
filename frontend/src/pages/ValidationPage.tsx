@@ -202,7 +202,7 @@ export default function ValidationPage() {
   })
 
   return (
-    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <h2 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '16px' }}>검증 사진</h2>
 
       {/* 탭 */}

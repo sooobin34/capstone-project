@@ -113,7 +113,7 @@ export default function MrvPage() {
     )
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <h2 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '12px' }}>MRV</h2>
       <div style={{
         background: '#e8f4fd', border: '0.5px solid #b3d9f7', borderRadius: '8px',
