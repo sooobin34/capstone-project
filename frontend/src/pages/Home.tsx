@@ -211,7 +211,7 @@ export default function Home() {
             onChange={(e) => { setSelectedFieldId(e.target.value ? Number(e.target.value) : ''); setSelectedNodeId('') }}
             style={{ flex: 1, fontSize: '11px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
           >
-            <option value="">논 고르기</option>
+            <option value="">논 선택</option>
             {fields.map((f) => <option key={f.id} value={f.id}>{f.field_name}</option>)}
           </select>
           <select
@@ -219,7 +219,7 @@ export default function Home() {
             onChange={(e) => setSelectedNodeId(e.target.value ? Number(e.target.value) : '')}
             style={{ flex: 1, fontSize: '11px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
           >
-            <option value="">노드 고르기</option>
+            <option value="">노드 선택</option>
             {nodes.map((n) => <option key={n.id} value={n.id}>Node {n.id}</option>)}
           </select>
         </div>

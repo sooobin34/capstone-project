@@ -1,16 +1,31 @@
 import { useState, useEffect } from 'react'
 import SensorChart from '../components/sensor/SensorChart'
 import SensorStats from '../components/sensor/SensorStats'
-import { getFields, getNodes, getSensorLogsRange, getSensorStats, Field, Node } from '../api/dashboard'
+import { getFields, getNodes, getSensorLogsRange, getSensorStats, getNodeStatus, Field, Node } from '../api/dashboard'
 
 const periodMap: Record<string, '1h' | '1d' | '1w' | '1m'> = {
   '1시간': '1h', '1일': '1d', '1주': '1w', '1개월': '1m',
 }
 const timeRanges = ['1시간', '1일', '1주', '1개월']
 
+const statusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    OVERFLOODED: '과담수', FLOODED: '담수', DRYING: '건조중', DRY: '건조', NO_DATA: '데이터 없음'
+  }
+  return map[status] ?? status
+}
+
+const statusColor = (status: string) => {
+  const map: Record<string, string> = {
+    OVERFLOODED: '#1565c0', FLOODED: '#1D9E75', DRYING: '#BA7517', DRY: '#E24B4A', NO_DATA: '#aaa'
+  }
+  return map[status] ?? '#aaa'
+}
+
 export default function SensorData() {
   const [fields, setFields] = useState<Field[]>([])
   const [nodes, setNodes] = useState<Node[]>([])
+  const [nodeStatuses, setNodeStatuses] = useState<Record<number, any>>({})
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
   const [selectedTime, setSelectedTime] = useState('1일')
@@ -18,20 +33,35 @@ export default function SensorData() {
   const [chartLabels, setChartLabels] = useState<string[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [tableLoading, setTableLoading] = useState(false)
 
-  // 논 목록 로드
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
   }, [])
 
-  // 논 선택 시 노드 목록 로드
   useEffect(() => {
     if (!selectedFieldId) return
     setSelectedNodeId(null)
-    getNodes(selectedFieldId).then(setNodes).catch(console.error)
+    setNodeStatuses({})
+    setTableLoading(true)
+    getNodes(selectedFieldId)
+      .then(async (data) => {
+        setNodes(data)
+        const statuses: Record<number, any> = {}
+        await Promise.all(data.map(async (node) => {
+          try {
+            const status = await getNodeStatus(node.id)
+            statuses[node.id] = status
+          } catch {
+            statuses[node.id] = null
+          }
+        }))
+        setNodeStatuses(statuses)
+      })
+      .catch(console.error)
+      .finally(() => setTableLoading(false))
   }, [selectedFieldId])
 
-  // 노드 + 기간 선택 시 그래프 데이터 로드
   useEffect(() => {
     if (!selectedNodeId) return
     fetchChartData(selectedNodeId, periodMap[selectedTime])
@@ -45,14 +75,14 @@ export default function SensorData() {
         getSensorStats(nodeId),
       ])
       setChartData(logs.map((l: any) => l.inner_water_level))
-     setChartLabels(logs.map((l: any) => {
-  const date = new Date(l.measured_at)
-  if (period === '1h' || period === '1d') {
-    return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-  } else {
-    return `${date.getMonth() + 1}/${date.getDate()}`
-  }
-}))
+      setChartLabels(logs.map((l: any) => {
+        const date = new Date(l.measured_at)
+        if (period === '1h' || period === '1d') {
+          return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        } else {
+          return `${date.getMonth() + 1}/${date.getDate()}`
+        }
+      }))
       setStats(statsData)
     } catch (e) {
       console.error('센서 데이터 조회 실패', e)
@@ -114,6 +144,61 @@ export default function SensorData() {
         </div>
       </div>
 
+      {/* 노드별 최신 측정 데이터 테이블 */}
+      {selectedFieldId && (
+        <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '12px' }}>노드별 최신 측정 데이터</p>
+          {tableLoading ? (
+            <p style={{ fontSize: '13px', color: '#aaa', textAlign: 'center', padding: '12px 0' }}>불러오는 중...</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ borderBottom: '0.5px solid #e0e0e0' }}>
+                  {['노드', '수위', '배터리', '최근 측정', '상태'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', fontSize: '11px', color: '#888', fontWeight: 500 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {nodes.map((node) => {
+                  const status = nodeStatuses[node.id]
+                  const log = status?.latest_log
+                  const currentStatus = status?.current_status ?? 'NO_DATA'
+                  return (
+                    <tr
+                      key={node.id}
+                      onClick={() => setSelectedNodeId(node.id)}
+                      style={{
+                        borderBottom: '0.5px solid #f0f0f0',
+                        cursor: 'pointer',
+                        background: selectedNodeId === node.id ? '#f0faf6' : 'white',
+                      }}
+                    >
+                      <td style={{ padding: '10px 10px', fontWeight: 500 }}>Node {node.id}</td>
+                      <td style={{ padding: '10px 10px' }}>{log ? `${log.inner_water_level}cm` : '-'}</td>
+                      <td style={{ padding: '10px 10px' }}>{log ? `${log.battery_voltage}V` : '-'}</td>
+                      <td style={{ padding: '10px 10px', color: '#888', fontSize: '12px' }}>
+                        {log ? new Date(log.measured_at).toLocaleString('ko-KR') : '-'}
+                      </td>
+                      <td style={{ padding: '10px 10px' }}>
+                        <span style={{
+                          fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: 500,
+                          background: statusColor(currentStatus) + '20',
+                          color: statusColor(currentStatus),
+                        }}>
+                          {statusLabel(currentStatus)}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* 그래프 + 통계 */}
       {!selectedFieldId ? (
         <div style={{ textAlign: 'center', padding: '80px', color: '#aaa', fontSize: '14px', background: 'white', borderRadius: '12px', border: '0.5px solid #e0e0e0' }}>
           논을 선택하면 수위 데이터가 표시됩니다
