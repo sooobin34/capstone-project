@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TrendChart from '../components/dashboard/TrendChart'
 import AlarmSummaryCard from '../components/dashboard/AlarmSummaryCard'
 import MrvSummaryCard from '../components/dashboard/MrvSummaryCard'
-import { getDashboard, getSensorLogsRange, mapWaterStatus, getFields, getNodes, getNodeStatus, getAlerts } from '../api/dashboard'
+import { getDashboard, getSensorLogsRange, mapWaterStatus, getFields, getNodes, getNodeStatus, getAlerts, getMrvReports } from '../api/dashboard'
 import FieldMap from '../components/map/FieldMap'
 
 export default function Home() {
@@ -21,6 +21,7 @@ export default function Home() {
   const [selectedAlerts, setSelectedAlerts] = useState<any[]>([])
   const [selectedAlertTotal, setSelectedAlertTotal] = useState<number | null>(null)
   const [selectedAlertUnresolved, setSelectedAlertUnresolved] = useState<number | null>(null)
+  const [selectedMrv, setSelectedMrv] = useState<any>(null)
 
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
@@ -53,6 +54,22 @@ export default function Home() {
         setSelectedAlertTotal(alerts.length)
         setSelectedAlertUnresolved(alerts.filter((a: any) => !a.is_resolved).length)
       }).catch(console.error)
+      getMrvReports(Number(selectedFieldId)).then(reports => {
+       if (reports.length > 0) {
+         const latest = reports.sort((a: any, b: any) => 
+      b.report_month.localeCompare(a.report_month)
+    )[0]
+          setSelectedMrv({
+            id: latest.id,
+            fieldName: latest.field_name,
+            reportMonth: latest.report_month,
+            awdCount: latest.total_awd_cycles,
+            carbonReduction: latest.carbon_reduction,
+          })
+        } else {
+          setSelectedMrv(null)
+        }
+      }).catch(console.error)
     } else {
       setNodes([])
       setSelectedNodeId('')
@@ -61,6 +78,7 @@ export default function Home() {
       setSelectedAlerts([])
       setSelectedAlertTotal(null)
       setSelectedAlertUnresolved(null)
+      setSelectedMrv(null)
     }
   }, [selectedFieldId])
 
@@ -107,7 +125,7 @@ export default function Home() {
   const alertUnresolved = selectedAlertUnresolved !== null ? selectedAlertUnresolved : dashboard?.unresolved_alerts ?? 0
   const recentAlerts = selectedAlerts.length > 0 ? selectedAlerts : dashboard?.recent_alerts ?? []
 
-  const latestMrv = dashboard?.latest_mrv_report
+  const latestMrv = selectedMrv !== null ? selectedMrv : dashboard?.latest_mrv_report
     ? {
         id: dashboard.latest_mrv_report.id,
         fieldName: dashboard.latest_mrv_report.field_name,
@@ -146,7 +164,7 @@ export default function Home() {
       height: 'calc(100vh - 48px)',
       display: 'grid',
       gridTemplateColumns: '1fr 1.2fr 1.5fr',
-      gridTemplateRows:'auto 1fr',
+      gridTemplateRows: 'auto 1fr',
       gap: '10px',
       boxSizing: 'border-box',
       overflow: 'hidden',
@@ -181,7 +199,6 @@ export default function Home() {
         background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px',
         display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px',
       }}>
-        {/* 현재 수위 */}
         <div>
           <p style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>현재 수위 · {fieldName}</p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
@@ -196,7 +213,6 @@ export default function Home() {
 
         <div style={{ height: '0.5px', background: '#e0e0e0' }} />
 
-        {/* 24시간 통계 */}
         <div>
           <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>24시간 통계</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { getLatestSensorLog, uploadValidationRecord, getValidationRecords, getValidationSummary, analyzeValidationRecord } from '../api/dashboard'
 
 const SURFACE_STATUS_OPTIONS = [
-  { label: '젖은 논', value: 'WATER_VISIBLE' },
-  { label: '마른 논', value: 'NO_WATER_VISIBLE' },
-  { label: '애매함', value: 'UNKNOWN' },
+  { label: 'low', value: 'WATER_VISIBLE' },
+  { label: 'mid', value: 'NO_WATER_VISIBLE' },
+  { label: 'high', value: 'UNKNOWN' },
 ]
 
 const ANGLE_OPTIONS = ['수직', '좌', '우', '기타']
@@ -12,9 +12,9 @@ const DISTANCE_OPTIONS = ['50cm', '80cm', '110cm', '140cm', '170cm', '200cm', '�
 const CONDITION_OPTIONS = ['햇빛 강함', '그림자 있음', '물 반사 있음', '흙 젖음', '흐림', '화질 흐림', '수초·벼 가림', '기타']
 
 const STATUS_LABEL_MAP: Record<string, string> = {
-  WATER_VISIBLE: '물보임',
-  NO_WATER_VISIBLE: '물안보임',
-  UNKNOWN: '애매함',
+  WATER_VISIBLE: 'low',
+  NO_WATER_VISIBLE: 'mid',
+  UNKNOWN: 'high',
 }
 
 function createImageTitle(observedStatus: string, angle: string, distance: string) {
