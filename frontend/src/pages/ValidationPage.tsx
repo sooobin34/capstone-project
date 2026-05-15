@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { getLatestSensorLog, uploadValidationRecord, getValidationRecords, getValidationSummary, analyzeValidationRecord } from '../api/dashboard'
 
 const SURFACE_STATUS_OPTIONS = [
-  { label: '물 보임', value: 'WATER_VISIBLE' },
-  { label: '물 안 보임', value: 'NO_WATER_VISIBLE' },
+  { label: '젖은 논', value: 'WATER_VISIBLE' },
+  { label: '마른 논', value: 'NO_WATER_VISIBLE' },
   { label: '애매함', value: 'UNKNOWN' },
 ]
 
