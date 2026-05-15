@@ -89,7 +89,7 @@ export default function FieldMap({ sensors, center, onNodeClick, selectedNodeId 
             : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'}
           url={isSatellite
             ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}
+            : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
         />
         <MapUpdater center={center} />
         {sensors.map((sensor) => (
