@@ -120,7 +120,7 @@ export default function MapPanel({
         </div>
       )}
 
-      {/* 논/노드 추가 영역 - 주석처리
+      {/*논/노드 추가 영역 - 주석처리
       <div style={{ marginBottom: '16px' }}>
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px', fontWeight: 500 }}>추가</p>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
