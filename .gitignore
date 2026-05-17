@@ -55,8 +55,27 @@ Thumbs.db
 *.db
 
 # =========================
-# 사진은 업로드 안함, 폴더 구조는 유지 (용량문제 / 구글 클라우드에 업로드 되어있음.)
+# 이미지 데이터 제외
+# 폴더 구조/README 유지
 # =========================
-data/*
+
+data/**
+!data/
+!data/README.md
 !data/.gitkeep
-/data_extra
+
+data_boundary_low_mid/**
+!data_boundary_low_mid/
+!data_boundary_low_mid/README.md
+!data_boundary_low_mid/.gitkeep
+
+data_boundary_mid_high/**
+!data_boundary_mid_high/
+!data_boundary_mid_high/README.md
+!data_boundary_mid_high/.gitkeep
+
+# 추가 실헝용 데이터
+data_extra/**
+!data_extra/
+!data_extra/README.md
+!data_extra/.gitkeep

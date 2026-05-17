@@ -1,4 +1,4 @@
-## train_boundary_low_mid.py랑 같이 쓰면 성능 86.30%
+## 성능 74.68%
 
 import os
 import random
@@ -9,7 +9,8 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 from torchvision import datasets, transforms, models
-from torch.utils.data import DataLoader
+from torchvision.models import EfficientNet_B0_Weights
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # =========================
@@ -19,10 +20,14 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 DATA_DIR = "../data"
 
 BATCH_SIZE = 8
-EPOCHS = 50
-LEARNING_RATE = 0.00005
-PATIENCE = 8
+EPOCHS = 60
+LEARNING_RATE = 0.00003
+PATIENCE = 10
 SEED = 42
+IMAGE_SIZE = 384
+
+MODEL_SAVE_PATH = "models/water_classifier_efficientnet_b0_best.pth"
+RESULT_DIR = "results_efficientnet_b0"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("사용 장치:", DEVICE)
@@ -43,28 +48,44 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
 set_seed(SEED)
+
+# =========================
+# Focal Loss
+# =========================
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=None, gamma=2.0):
+        super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.ce = nn.CrossEntropyLoss(weight=alpha, reduction="none")
+
+    def forward(self, inputs, targets):
+        ce_loss = self.ce(inputs, targets)
+        pt = torch.exp(-ce_loss)
+        focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+        return focal_loss.mean()
 
 # =========================
 # 이미지 전처리
 # =========================
 
 train_transform = transforms.Compose([
-    transforms.Resize((256, 256)),
-    transforms.RandomResizedCrop(224, scale=(0.9, 1.0)),
+    transforms.Resize((420, 420)),
+    transforms.RandomResizedCrop(IMAGE_SIZE, scale=(0.85, 1.0)),
     transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(5),
+    transforms.RandomRotation(7),
     transforms.ColorJitter(
-        brightness=0.1,
-        contrast=0.1,
-        saturation=0.1
+        brightness=0.15,
+        contrast=0.15,
+        saturation=0.15
     ),
     transforms.ToTensor(),
 ])
 
 val_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
     transforms.ToTensor(),
 ])
 
@@ -82,10 +103,30 @@ val_dataset = datasets.ImageFolder(
     transform=val_transform
 )
 
+class_names = train_dataset.classes
+print("클래스:", class_names)
+
+# =========================
+# WeightedRandomSampler
+# =========================
+
+targets = [label for _, label in train_dataset.samples]
+class_counts = np.bincount(targets)
+class_weights_np = 1.0 / class_counts
+
+sample_weights = [class_weights_np[label] for label in targets]
+sample_weights = torch.DoubleTensor(sample_weights)
+
+sampler = WeightedRandomSampler(
+    weights=sample_weights,
+    num_samples=len(sample_weights),
+    replacement=True
+)
+
 train_loader = DataLoader(
     train_dataset,
     batch_size=BATCH_SIZE,
-    shuffle=True
+    sampler=sampler
 )
 
 val_loader = DataLoader(
@@ -94,38 +135,50 @@ val_loader = DataLoader(
     shuffle=False
 )
 
-print("클래스:", train_dataset.classes)
+print("클래스별 train 개수:", class_counts)
 
 # =========================
 # 모델 생성
 # =========================
 
-model = models.resnet18(pretrained=True)
-model.fc = nn.Linear(model.fc.in_features, 3)
+weights = EfficientNet_B0_Weights.DEFAULT
+
+model = models.efficientnet_b0(weights=weights)
+
+model.classifier[1] = nn.Linear(
+    model.classifier[1].in_features,
+    len(class_names)
+)
+
 model = model.to(DEVICE)
 
 # =========================
 # 손실함수 / 옵티마이저 / 스케줄러
 # =========================
 
-class_weights = torch.tensor([
+# class_names 순서가 보통 ['high', 'low', 'mid']일 가능성이 큼
+class_weight_values = torch.tensor([
     1.0,   # high
-    1.5,   # low
+    1.4,   # low
     1.0    # mid
 ]).to(DEVICE)
 
-criterion = nn.CrossEntropyLoss(weight=class_weights)
+criterion = FocalLoss(
+    alpha=class_weight_values,
+    gamma=2.0
+)
 
-optimizer = optim.Adam(
+optimizer = optim.AdamW(
     model.parameters(),
-    lr=LEARNING_RATE
+    lr=LEARNING_RATE,
+    weight_decay=0.0001
 )
 
 scheduler = ReduceLROnPlateau(
     optimizer,
     mode="max",
     factor=0.5,
-    patience=3
+    patience=4
 )
 
 # =========================
@@ -133,7 +186,7 @@ scheduler = ReduceLROnPlateau(
 # =========================
 
 os.makedirs("models", exist_ok=True)
-os.makedirs("results", exist_ok=True)
+os.makedirs(RESULT_DIR, exist_ok=True)
 
 best_acc = 0.0
 best_epoch = 0
@@ -147,14 +200,11 @@ learning_rates = []
 # 학습
 # =========================
 
-for_epoch = range(EPOCHS)
 for epoch in range(EPOCHS):
-
     model.train()
     running_loss = 0.0
 
     for images, labels in train_loader:
-
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
 
@@ -181,9 +231,7 @@ for epoch in range(EPOCHS):
     total = 0
 
     with torch.no_grad():
-
         for images, labels in val_loader:
-
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
 
@@ -211,7 +259,7 @@ for epoch in range(EPOCHS):
         best_epoch = epoch + 1
         early_stop_count = 0
 
-        torch.save(model.state_dict(), "models/water_classifier_best.pth")
+        torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
         print(f"Best model saved! Epoch: {best_epoch}, Accuracy: {best_acc:.2f}%")
 
@@ -231,24 +279,24 @@ plt.figure()
 plt.plot(train_losses)
 plt.xlabel("Epoch")
 plt.ylabel("Train Loss")
-plt.title("Training Loss")
-plt.savefig("results/train_loss.png")
+plt.title("EfficientNet-B0 Training Loss")
+plt.savefig(os.path.join(RESULT_DIR, "train_loss.png"))
 plt.close()
 
 plt.figure()
 plt.plot(val_accuracies)
 plt.xlabel("Epoch")
 plt.ylabel("Validation Accuracy (%)")
-plt.title("Validation Accuracy")
-plt.savefig("results/val_accuracy.png")
+plt.title("EfficientNet-B0 Validation Accuracy")
+plt.savefig(os.path.join(RESULT_DIR, "val_accuracy.png"))
 plt.close()
 
 plt.figure()
 plt.plot(learning_rates)
 plt.xlabel("Epoch")
 plt.ylabel("Learning Rate")
-plt.title("Learning Rate Schedule")
-plt.savefig("results/learning_rate.png")
+plt.title("EfficientNet-B0 Learning Rate Schedule")
+plt.savefig(os.path.join(RESULT_DIR, "learning_rate.png"))
 plt.close()
 
 # =========================
@@ -257,5 +305,5 @@ plt.close()
 
 print("\n학습 완료!")
 print(f"가장 좋은 모델: Epoch {best_epoch}, Validation Accuracy {best_acc:.2f}%")
-print("저장 위치: models/water_classifier_best.pth")
-print("그래프 저장 위치: results/")
+print(f"저장 위치: {MODEL_SAVE_PATH}")
+print(f"그래프 저장 위치: {RESULT_DIR}/")
