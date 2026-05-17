@@ -78,11 +78,11 @@ LOW-MID 경계 모델 재검사 수행
 ```
 
 * 기본 모델 대비 성능 향상 여부 비교 목적
-* 최종 test accuracy 기준 약 86.30% 수준 확인
+* 최종 test accuracy 87.67%
 
 ---
 
-### inference.py (구현 중...)
+### inference.py
 
 * FastAPI 연동용 실제 추론(Inference) 코드
 * 업로드된 이미지 1장을 입력받아 LOW / MID / HIGH 예측 수행
