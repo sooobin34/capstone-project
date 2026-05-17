@@ -1,3 +1,23 @@
+# =========================================================
+# evaluate_boundary_low_mid.py
+# =========================================================
+
+# train_boundary_low_mid.py 에서 학습한
+# LOW-MID 경계 보정 모델 평가 코드
+#
+# LOW 와 MID 데이터만 이용하여
+# 경계 구간 분류 성능 측정
+#
+# 출력:
+# - Test Accuracy
+# - Confusion Matrix
+# - Classification Report
+# - 오분류 이미지 목록
+#
+# 최종 LOW-MID 경계 모델 성능:
+# Test Accuracy: 82.50%
+# =========================================================
+
 import os
 import torch
 import torch.nn as nn

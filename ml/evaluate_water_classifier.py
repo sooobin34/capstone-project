@@ -1,3 +1,23 @@
+# =========================================================
+# evaluate_water_classifier.py
+# =========================================================
+
+# train_water_classifier.py 에서 학습한
+# 기본 ResNet18 수위 분류 모델 평가 코드
+#
+# test 데이터셋 기준으로
+# LOW / MID / HIGH 분류 성능 측정
+#
+# 출력:
+# - Test Accuracy
+# - Confusion Matrix
+# - Classification Report
+# - 오분류 이미지 목록
+#
+# 최종 기본 모델 성능:
+# Test Accuracy: 86.30%
+# =========================================================
+
 import os
 import torch
 import torch.nn as nn

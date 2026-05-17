@@ -1,4 +1,5 @@
-## train_boundary_low_mid.py랑 같이 쓰면 성능 86.30%
+# 검증 정확률 (Validation Accuracy) : 87.34%
+
 
 import os
 import random
@@ -21,7 +22,6 @@ DATA_DIR = "../data"
 BATCH_SIZE = 8
 EPOCHS = 50
 LEARNING_RATE = 0.00005
-PATIENCE = 8
 SEED = 42
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -137,7 +137,6 @@ os.makedirs("results", exist_ok=True)
 
 best_acc = 0.0
 best_epoch = 0
-early_stop_count = 0
 
 train_losses = []
 val_accuracies = []
@@ -209,19 +208,10 @@ for epoch in range(EPOCHS):
     if accuracy > best_acc:
         best_acc = accuracy
         best_epoch = epoch + 1
-        early_stop_count = 0
 
         torch.save(model.state_dict(), "models/water_classifier_best.pth")
 
         print(f"Best model saved! Epoch: {best_epoch}, Accuracy: {best_acc:.2f}%")
-
-    else:
-        early_stop_count += 1
-        print(f"EarlyStopping Count: {early_stop_count}/{PATIENCE}")
-
-    if early_stop_count >= PATIENCE:
-        print("\nEarly stopping triggered.")
-        break
 
 # =========================
 # 그래프 저장

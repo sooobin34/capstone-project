@@ -1,3 +1,29 @@
+# =========================================================
+# evaluate_hierarchical_classifier.py
+# =========================================================
+
+# 기본 ResNet18 수위 분류 모델과
+# LOW-MID 경계 보정 모델을 결합한
+# 계층형(Hierarchical) 평가 코드
+#
+# 동작 방식:
+# 1차 기본 모델에서 LOW / MID / HIGH 예측 수행
+# LOW 또는 MID 로 예측된 경우,
+# LOW-MID 경계 모델로 한 번 더 재분류 수행
+#
+# 목적:
+# LOW ↔ MID 경계 구간 오분류 감소
+#
+# 출력:
+# - Hierarchical Test Accuracy
+# - Confusion Matrix
+# - Classification Report
+# - 오분류 이미지 목록
+#
+# 최종 계층형 모델 성능:
+# Hierarchical Test Accuracy: 87.67%
+# =========================================================
+
 import os
 import torch
 import torch.nn as nn

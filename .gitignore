@@ -68,14 +68,3 @@ data_boundary_low_mid/**
 !data_boundary_low_mid/
 !data_boundary_low_mid/README.md
 !data_boundary_low_mid/.gitkeep
-
-data_boundary_mid_high/**
-!data_boundary_mid_high/
-!data_boundary_mid_high/README.md
-!data_boundary_mid_high/.gitkeep
-
-# 추가 실헝용 데이터
-data_extra/**
-!data_extra/
-!data_extra/README.md
-!data_extra/.gitkeep
