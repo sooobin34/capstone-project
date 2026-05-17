@@ -27,7 +27,7 @@ class ValidationRecord(Base):
     # 사진/사람 관찰 기준 표면 상태: WATER_VISIBLE / NO_WATER_VISIBLE / UNKNOWN
     observed_surface_status = Column(String(50), nullable=True)
 
-    # AI 분석 결과: WATER_VISIBLE / NO_WATER_VISIBLE / UNKNOWN
+    # AI 분석 결과: LOW / MID / HIGH
     ai_predicted_status = Column(String(50), nullable=True)
     ai_confidence = Column(Numeric(5, 2), nullable=True)
 

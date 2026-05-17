@@ -33,7 +33,7 @@ class ValidationAnalyzeRequest(BaseModel):
 
 
 class ValidationAnalyzeResult(BaseModel):
-    ai_predicted_status: str = Field(description="WATER_VISIBLE, NO_WATER_VISIBLE, or UNKNOWN")
+    ai_predicted_status: str = Field(description="LOW, MID, or HIGH")
     confidence: float
     reason: str
     limitations: str | None = None

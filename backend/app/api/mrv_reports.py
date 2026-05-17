@@ -903,7 +903,8 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
             pdf,
             "검증 결과는 센서 기반 상태 판정의 신뢰성을 확인하기 위한 보조 자료로 활용된다. "
             "일부 불일치 사례는 촬영 시점과 센서 측정 시점 간 차이 또는 수위 경계 구간에서의 판단 차이에 의해 발생할 수 있다. "
-            "AI 분석 결과 중 'UNKNOWN'으로 판정된 데이터는 정확도 산정에서 제외하였다.",
+            "AI-센서 일치율은 촬영 시점 기준 근접 센서 로그의 수위값을 LOW/MID/HIGH 기준으로 변환한 뒤 AI 예측 결과와 비교하여 산정하였다. "
+            "근접 센서 로그가 없는 경우 actual_water_level_cm 값을 보조 기준으로 사용하며, 비교 가능한 수위값이 없는 데이터는 정확도 산정에서 제외하였다.",
             LEFT_X, y, max_text_width, regular_font,
         )
     else:

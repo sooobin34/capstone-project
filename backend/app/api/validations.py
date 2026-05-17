@@ -1,6 +1,5 @@
-import base64
-import json
 import os
+import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -25,6 +24,12 @@ from app.utils.response import success_response
 router = APIRouter(prefix="/validations", tags=["Validations"])
 
 UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads" / "validation_records"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
+from ml.inference import predict_water_level
+
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 SURFACE_STATUS_VALUES = {"WATER_VISIBLE", "NO_WATER_VISIBLE", "UNKNOWN"}
@@ -180,15 +185,18 @@ def calculate_ai_sensor_match(
 
     return sensor_surface_status == ai_status
 
-def build_ai_note(result: dict) -> str:
-    confidence = result.get("confidence")
-    reason = result.get("reason") or ""
-    limitations = result.get("limitations") or ""
-    note = f"AI confidence={confidence}; reason={reason}"
-    if limitations:
-        note += f"; limitations={limitations}"
-    return note[:255]
+def water_level_cm_to_ai_status(value):
+    if value is None:
+        return None
 
+    value = float(value)
+
+    if value < 2:
+        return "LOW"
+    if value < 4:
+        return "MID"
+
+    return "HIGH"
 
 def local_upload_path_from_url(image_url: str) -> Path | None:
     marker = "/uploads/validation_records/"
@@ -200,25 +208,6 @@ def local_upload_path_from_url(image_url: str) -> Path | None:
     if upload_root not in candidate.parents and candidate != upload_root:
         return None
     return candidate
-
-def image_input_for_openai(image_url: str) -> dict:
-    local_path = local_upload_path_from_url(image_url)
-    if local_path and local_path.exists():
-        suffix = local_path.suffix.lower()
-        mime_type = {
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".webp": "image/webp",
-            ".gif": "image/gif",
-        }.get(suffix, "image/jpeg")
-        encoded = base64.b64encode(local_path.read_bytes()).decode("ascii")
-        return {
-            "type": "input_image",
-            "image_url": f"data:{mime_type};base64,{encoded}",
-        }
-
-    return {"type": "input_image", "image_url": image_url}
 
 # -------------------------
 # CREATE
@@ -474,77 +463,61 @@ def analyze_validation_image(
     db: Session = Depends(get_db),
 ):
     record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
+
     if not record:
         raise HTTPException(status_code=404, detail="Validation record not found.")
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured.")
+    local_path = local_upload_path_from_url(record.image_url)
 
-    try:
-        from openai import OpenAI
-    except ImportError as exc:
-        raise HTTPException(status_code=503, detail="openai package is not installed.") from exc
-
-    model = (payload.model if payload else None) or os.getenv("OPENAI_VISION_MODEL", "gpt-4.1-mini")
-    client = OpenAI(api_key=api_key)
-
-    prompt = """
-This is a validation image for an AWD rice paddy water-management capstone project.
-Classify whether standing water is visible on the paddy surface.
-
-Use exactly one of:
-WATER_VISIBLE, NO_WATER_VISIBLE, UNKNOWN.
-
-Do not estimate exact centimeter water depth. Use only visual evidence such as
-standing water, reflections, wet/dry soil, vegetation, angle, and occlusion.
-
-Return JSON only:
-{
-  "ai_predicted_status": "WATER_VISIBLE | NO_WATER_VISIBLE | UNKNOWN",
-  "confidence": 0-100,
-  "reason": "short evidence",
-  "limitations": "angle/reflection/occlusion/weather limitations"
-}
-""".strip()
-
-    try:
-        response = client.responses.create(
-            model=model,
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": prompt},
-                        image_input_for_openai(record.image_url),
-                    ],
-                }
-            ],
+    if not local_path or not local_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Uploaded image file not found on server."
         )
 
-        result = json.loads(response.output_text)
-
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=502, detail="OpenAI response was not valid JSON.") from exc
+    try:
+        result = predict_water_level(str(local_path))
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"OpenAI image analysis failed: {exc}") from exc
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI image analysis failed: {exc}"
+        ) from exc
 
-    # normalize 유지
-    ai_status = normalize_surface_status(result.get("ai_predicted_status"))
-    result["ai_predicted_status"] = ai_status
+    ai_status = result.get("predicted_class")  # LOW / MID / HIGH
+    ai_confidence = round(float(result.get("confidence", 0)) * 100, 2)
 
-    # 저장
     if payload is None or payload.save_result:
         record.ai_predicted_status = ai_status
-        record.ai_confidence = result.get("confidence")
-        record.ai_sensor_match = calculate_ai_sensor_match(
-            record.sensor_predicted_status,
-            ai_status,
-            record.is_match,
+        record.ai_confidence = ai_confidence
+
+        nearest_log = get_nearest_sensor_log(
+            db=db,
+            node_id=record.node_id,
+            captured_at=record.captured_at,
         )
 
-        # ❌ note 덮어쓰기 제거 (중요)
-        # record.note = build_ai_note(result)
+        if nearest_log:
+            sensor_level = nearest_log.inner_water_level
+        else:
+            summary = (
+                db.query(AwdDailySummary)
+                .filter(
+                    AwdDailySummary.node_id == record.node_id,
+                    AwdDailySummary.record_date == record.record_date,
+                )
+                .order_by(AwdDailySummary.id.desc())
+                .first()
+            )
+
+            sensor_level = summary.avg_inner_level if summary else None
+
+        sensor_ai_status = water_level_cm_to_ai_status(sensor_level)
+
+        record.ai_sensor_match = (
+            sensor_ai_status == ai_status
+            if sensor_ai_status is not None
+            else None
+        )
 
         db.commit()
         db.refresh(record)
