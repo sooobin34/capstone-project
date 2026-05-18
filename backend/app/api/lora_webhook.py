@@ -1,10 +1,7 @@
 import base64
-import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any
 
-from fastapi import Request
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
@@ -31,23 +28,9 @@ class LoRaWebhookPayload(BaseModel):
     dev_eui: str | None = Field(default=None, alias="devEUI")
     dev_eui_lower: str | None = Field(default=None, alias="devEui")
     data: str | None = None
-    payload_hex: str | None = Field(default=None, alias="payload")
     time: datetime | None = None
-    timestamp: int | None = None
-    event_type: str | None = Field(default=None, alias="type")
     f_port: int | None = Field(default=None, alias="fPort")
     device_info: LoRaDeviceInfo | None = Field(default=None, alias="deviceInfo")
-    log_object: dict[str, Any] | None = Field(default=None, alias="logObject")
-
-
-def get_log_payload(payload: LoRaWebhookPayload) -> dict[str, Any]:
-    if not payload.log_object:
-        return {}
-
-    log_payload = payload.log_object.get("payload")
-    if isinstance(log_payload, dict):
-        return log_payload
-    return {}
 
 
 def normalize_deveui(value: str | None) -> str:
@@ -55,14 +38,11 @@ def normalize_deveui(value: str | None) -> str:
 
 
 def get_payload_deveui(payload: LoRaWebhookPayload) -> str:
-    log_payload = get_log_payload(payload)
     candidates = [
         payload.dev_eui,
         payload.dev_eui_lower,
         payload.device_info.dev_eui if payload.device_info else None,
         payload.device_info.dev_eui_upper if payload.device_info else None,
-        log_payload.get("devEUI"),
-        log_payload.get("devEui"),
     ]
     for candidate in candidates:
         normalized = normalize_deveui(candidate)
@@ -91,92 +71,24 @@ def parse_water_level_cm(raw: bytes) -> Decimal:
     return Decimal(water_level_mm) / Decimal("10")
 
 
-def parse_raw_payload(payload: LoRaWebhookPayload) -> bytes | None:
-    log_payload = get_log_payload(payload)
-    data = payload.data or log_payload.get("data")
-    if data:
-        try:
-            return base64.b64decode(str(data), validate=True)
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail="LoRa payload data must be valid Base64.") from exc
-
-    payload_hex = payload.payload_hex or log_payload.get("payload")
-    if payload_hex:
-        try:
-            return bytes.fromhex(str(payload_hex))
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail="LoRa payload must be valid HEX.") from exc
-
-    return None
-
-
-def get_measured_at(payload: LoRaWebhookPayload) -> datetime:
-    if payload.time:
-        return payload.time
-
-    log_payload = get_log_payload(payload)
-    timestamp = payload.timestamp or log_payload.get("timestamp")
-    if timestamp:
-        return datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
-
-    return datetime.now(timezone.utc)
-
-
 @router.post("")
-async def receive_lora_webhook(
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    raw_body = await request.json()
+def receive_lora_webhook(payload: LoRaWebhookPayload, db: Session = Depends(get_db)):
+    if not payload.data:
+        raise HTTPException(status_code=400, detail="LoRa payload data is required.")
 
-    print(
-        "LORA_WEBHOOK_RAW_BODY",
-        json.dumps(raw_body, ensure_ascii=False),
-        flush=True,
-    )
-
-    payload = LoRaWebhookPayload.model_validate(raw_body)
-
-    print(
-        "LORA_WEBHOOK_INCOMING",
-        json.dumps(payload.model_dump(by_alias=True), default=str, ensure_ascii=False),
-        flush=True,
-    )
-
-    raw_payload = parse_raw_payload(payload)
-
-    if raw_payload is None:
-        print("LORA_IGNORED_NO_PAYLOAD", {
-            "dev_eui": get_payload_deveui(payload),
-            "event_type": payload.event_type,
-            "f_port": payload.f_port,
-            "timestamp": payload.timestamp,
-        }, flush=True)
-
-        return success_response(
-            {
-                "event_type": payload.event_type,
-                "dev_eui": get_payload_deveui(payload),
-            },
-            "LoRa webhook event ignored because it has no uplink payload.",
-        )
+    try:
+        raw_payload = base64.b64decode(payload.data, validate=True)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="LoRa payload data must be valid Base64.") from exc
 
     dev_eui = get_payload_deveui(payload)
     node = find_node_by_deveui(db, dev_eui)
     if not node:
         raise HTTPException(status_code=404, detail=f"DevEUI {dev_eui} node not found.")
 
-    measured_at = get_measured_at(payload)
+    measured_at = payload.time or datetime.now(timezone.utc)
     water_level_cm = parse_water_level_cm(raw_payload)
 
-    print("LORA_DECODED", {
-    "dev_eui": dev_eui,
-    "node_id": node.id,
-    "raw_payload_hex": raw_payload.hex(),
-    "water_level_cm": str(water_level_cm),
-    "measured_at": str(measured_at),
-    }, flush=True)
-    
     sensor_log_payload = SensorLogCreate(
         node_id=node.id,
         inner_water_level=water_level_cm,
@@ -185,13 +97,6 @@ async def receive_lora_webhook(
         measured_at=measured_at,
     )
     sensor_log_response = save_sensor_log(sensor_log_payload, db)
-
-    print(
-    f"LORA_DB_SAVED_OK node_id={node.id} "
-    f"water_level_cm={water_level_cm} "
-    f"measured_at={measured_at}",
-    flush=True,
-    )
 
     return success_response(
         {
