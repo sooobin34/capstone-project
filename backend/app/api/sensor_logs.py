@@ -81,7 +81,8 @@ def save_sensor_log(payload: SensorLogCreate, db: Session):
 
 @router.post("")
 def create_sensor_log(payload: SensorLogCreate, db: Session = Depends(get_db)):
-    return save_sensor_log(payload, db)
+    raise HTTPException(status_code=403, detail="POST /sensor-logs is temporarily disabled for ingest path debugging.")
+    
 
 
 @router.get("/node/{node_id}")
