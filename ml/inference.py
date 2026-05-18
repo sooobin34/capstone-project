@@ -51,7 +51,7 @@ transform = transforms.Compose([
 # =========================
 
 def load_resnet18(num_classes: int, model_path: str):
-    model = models.resnet18(pretrained=True)
+    model = models.resnet18(weights=None)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     model.load_state_dict(
