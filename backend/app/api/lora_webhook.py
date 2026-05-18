@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.api.sensor_logs import save_sensor_log
 from app.models.iot_node import IotNode
+from app.models.lora_webhook_debug import LoRaWebhookDebug
 from app.schemas.sensor_log import SensorLogCreate
 from app.utils.response import success_response
 
@@ -97,6 +98,16 @@ def receive_lora_webhook(payload: LoRaWebhookPayload, db: Session = Depends(get_
         measured_at=measured_at,
     )
     sensor_log_response = save_sensor_log(sensor_log_payload, db)
+
+    debug_row = LoRaWebhookDebug(
+        event_query="up",
+        dev_eui=dev_eui,
+        raw_payload_hex=raw_payload.hex(),
+        status="success",
+        error_message=None,
+    )
+    db.add(debug_row)
+    db.commit()
 
     return success_response(
         {
