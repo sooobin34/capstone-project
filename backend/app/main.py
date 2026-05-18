@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -16,7 +16,7 @@ from app.api import validations
 from app.core.database import engine
 
 
-# 모델 import는 유지해도 되고, 안 써도 됨
+# 紐⑤뜽 import???좎??대룄 ?섍퀬, ???⑤룄 ??
 from app.models.alert import Alert
 from app.models.awd_daily_summary import AwdDailySummary
 from app.models.iot_node import IotNode
@@ -37,6 +37,7 @@ app.add_middleware(
         "https://capstone-project-theta-amber.vercel.app",
     
     ],
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +69,9 @@ def db_test():
         value = result.scalar()
 
     return {
-        "message": "DB 연결 성공",
+        "message": "DB ?곌껐 ?깃났",
         "result": value
     }
+
+
+
