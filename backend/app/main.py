@@ -54,8 +54,8 @@ app.include_router(fields_router)
 app.include_router(validations.router)
 app.include_router(lora_webhook_router)
 
-Path("app/uploads").mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
+Path("/var/data/uploads").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="/var/data/uploads"), name="uploads")
 
 @app.get("/")
 def root():

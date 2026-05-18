@@ -23,7 +23,7 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/validations", tags=["Validations"])
 
-UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads" / "validation_records"
+UPLOAD_DIR = Path("/var/data/uploads/validation_records")
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
