@@ -50,7 +50,7 @@ function NavBar() {
               onClick={() => setMenuOpen(!menuOpen)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#555', padding: '4px 8px' }}
             >
-              {menuOpen ? '?? : '??}
+              {menuOpen ? 'Close' : 'Menu'}
             </button>
 
             {/* 紐⑤컮???쒕∼?ㅼ슫 硫붾돱 */}
