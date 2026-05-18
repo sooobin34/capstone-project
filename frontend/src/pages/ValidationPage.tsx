@@ -310,8 +310,8 @@ export default function ValidationPage() {
                       </div>
                     </div>
                     <p style={{ fontSize: '11px', color: '#888', marginBottom: '2px' }}>
-                      사람: {SURFACE_STATUS_OPTIONS_AUTO.find(s => s.value === record.observed_surface_status)?.label ?? record.observed_surface_status}
-                      {record.ai_predicted_status && ` · AI: ${SURFACE_STATUS_OPTIONS_AUTO.find(s => s.value === record.ai_predicted_status)?.label ?? record.ai_predicted_status}`}
+                      사람: {SURFACE_STATUS_OPTIONS.find(s => s.value === record.observed_surface_status)?.label ?? record.observed_surface_status}
+{record.ai_predicted_status && ` · AI: ${SURFACE_STATUS_OPTIONS_AUTO.find(s => s.value === record.ai_predicted_status)?.label ?? record.ai_predicted_status}`}
                       {record.ai_confidence != null && ` · 신뢰도 ${record.ai_confidence}%`}
                     </p>
                     {record.note && <p style={{ fontSize: '11px', color: '#aaa' }}>{record.note}</p>}
