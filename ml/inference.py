@@ -51,12 +51,18 @@ transform = transforms.Compose([
 # =========================
 
 def load_resnet18(num_classes: int, model_path: str):
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"모델 파일을 찾을 수 없습니다: {model_path}")
+
     model = models.resnet18(weights=None)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
 
-    model.load_state_dict(
-        torch.load(model_path, map_location=DEVICE)
-    )
+    checkpoint = torch.load(model_path, map_location=DEVICE)
+
+    if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+        checkpoint = checkpoint["model_state_dict"]
+
+    model.load_state_dict(checkpoint)
 
     model = model.to(DEVICE)
     model.eval()
