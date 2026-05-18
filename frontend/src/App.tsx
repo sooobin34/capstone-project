@@ -39,7 +39,7 @@ function NavBar() {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <NavLink to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+        <NavLink to="/map" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
           <img src={logo} alt="AquaPaddy" style={{ height: '44px', objectFit: 'contain' }} />
         </NavLink>
 

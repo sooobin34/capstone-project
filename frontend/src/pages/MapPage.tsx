@@ -18,7 +18,7 @@ export default function MapPage() {
     getFields()
       .then(data => {
         setFields(data)
-        if (data.length > 0 && !selectedFieldId) setSelectedFieldId(data[0].id)
+       // if (data.length > 0 && !selectedFieldId) setSelectedFieldId(data[0].id)
         // 모바일이면 패널 기본 닫기, PC면 열기
         setIsPanelOpen(window.innerWidth > 768)
       })
