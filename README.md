@@ -1,7 +1,5 @@
 # 🌾 AI 기반 AWD 논 수위 모니터링 및 MRV 자동화 시스템
 
-> 본 README는 main / backend / data / data_boundary_low_mid / ml 프로젝트 README를 통합하여 구성되었습니다.
-
 LoRaWAN 기반 실시간 수위 센서와 AI 이미지 분석을 활용한 스마트 논 관리 플랫폼
 
 ---
@@ -40,13 +38,13 @@ LoRaWAN 기반 IoT 센서와 AI 이미지 분석 기술을 활용하여 논의 �
 
 ---
 
-# 📦 프로젝트 구성
+# 📦 프로젝트 구성 (여기 수정해야됨)
 
 | 폴더                     | 설명                        |
 | ---------------------- | ------------------------- |
 | backend/               | FastAPI 기반 백엔드 서버         |
 | frontend/              | React 기반 프론트엔드            |
-| embedded/              | STM32 + LoRaWAN 펌웨어       |
+| iot/                   | STM32 + LoRaWAN 펌웨어       |
 | data/                  | AI 학습용 논 수위 이미지 데이터셋      |
 | data_boundary_low_mid/ | LOW-MID 경계 전용 데이터셋        |
 | ml/                    | PyTorch 기반 AI 학습 및 추론 시스템 |
@@ -381,7 +379,7 @@ MID로 판단된 경우
 
 ---
 
-# 📡 LoRaWAN 시스템
+# 📡 LoRaWAN 시스템 (여기 수정해야됨)
 
 ## 통신 구조
 
@@ -501,7 +499,7 @@ STM32CubeIDE 사용
 
 ---
 
-# 🚀 향후 개선 방향
+# 🚀 향후 개선 방향 (여기 수정해야됨)
 
 * 실시간 이상 탐지 기능 추가
 * AI 기반 수위 예측 모델 개발
