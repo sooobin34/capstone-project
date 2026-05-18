@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
+﻿import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
 import { useState } from 'react'
 import Home from './pages/Home'
 import SensorData from './pages/SensorData'
@@ -14,7 +14,7 @@ const navItems = [
   { label: 'Map', path: '/map' },
   { label: 'Alerts', path: '/alerts' },
   { label: 'MRV', path: '/mrv' },
-  { label: 'Validation', path: '/validation' },
+  { label: 'Validation', path: '/validations' },
 ]
 
 function NavBar() {
@@ -45,15 +45,15 @@ function NavBar() {
 
         {isMobile ? (
           <>
-            {/* 햄버거 버튼 */}
+            {/* ?꾨쾭嫄?踰꾪듉 */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#555', padding: '4px 8px' }}
             >
-              {menuOpen ? '✕' : '☰'}
+              {menuOpen ? '?? : '??}
             </button>
 
-            {/* 모바일 드롭다운 메뉴 */}
+            {/* 紐⑤컮???쒕∼?ㅼ슫 硫붾돱 */}
             {menuOpen && (
               <div style={{
                 position: 'fixed', top: '48px', left: 0, right: 0,
@@ -122,9 +122,11 @@ export default function App() {
           <Route path="/sensor" element={<SensorData />} />
           <Route path="/alerts" element={<AlertPage />} />
           <Route path="/mrv" element={<MrvPage />} />
-          <Route path="/validation" element={<ValidationPage />} />
+          <Route path="/validation" element={<Navigate to="/validations" replace />} />
+          <Route path="/validations" element={<ValidationPage />} />
         </Routes>
       </div>
     </BrowserRouter>
   )
 }
+
