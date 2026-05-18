@@ -2,7 +2,7 @@ import base64
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -72,9 +72,24 @@ def parse_water_level_cm(raw: bytes) -> Decimal:
 
 
 @router.post("")
-def receive_lora_webhook(payload: LoRaWebhookPayload, db: Session = Depends(get_db)):
+async def receive_lora_webhook(
+    request: Request,
+    payload: LoRaWebhookPayload,
+    db: Session = Depends(get_db),
+):
+    event = request.query_params.get("event")
+
+    if event != "up":
+        return success_response(
+            {"event": event},
+            "LoRa webhook event ignored because it is not an uplink.",
+        )
+
     if not payload.data:
-        raise HTTPException(status_code=400, detail="LoRa payload data is required.")
+        return success_response(
+            {"event": event, "dev_eui": get_payload_deveui(payload)},
+            "LoRa webhook event ignored because it has no uplink payload.",
+        )
 
     try:
         raw_payload = base64.b64decode(payload.data, validate=True)
