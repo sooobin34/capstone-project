@@ -1,0 +1,4 @@
+Middlewares/SubGHz_Phy/lorawan/radio_drivers/sx126x_driver/src/sx126x_driver_version.o: \
+ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_drivers/sx126x_driver/src/sx126x_driver_version.c \
+ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_drivers/sx126x_driver/src/sx126x_driver_version.h
+C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_drivers/sx126x_driver/src/sx126x_driver_version.h:

@@ -92,9 +92,6 @@ typedef enum TxEventType_e
   * Stack id value (multistacks modem is not yet available)
   */
 #define STACK_ID 0
-#ifndef APP_TX_DUTYCYCLE
-#define APP_TX_DUTYCYCLE 60
-#endif
 
 /*---------------------------------------------------------------------------*/
 /*                             LoRaWAN NVM configuration                     */
@@ -179,6 +176,7 @@ typedef enum TxEventType_e
 /* USER CODE END PM */
 
 /* Private function prototypes -----------------------------------------------*/
+
 /**
   * @brief  LoRa End Node send request
   */
@@ -260,8 +258,8 @@ static void OnJoinTimerLedEvent(void *context);
 /**
   * @brief LoRaWAN User credentials
   */
-static uint8_t user_dev_eui[8]  = FORMAT32_KEY(LORAWAN_DEVICE_EUI);
-static uint8_t user_join_eui[8] = FORMAT32_KEY(LORAWAN_JOIN_EUI);
+static uint8_t user_dev_eui[8]      = FORMAT32_KEY(LORAWAN_DEVICE_EUI);
+static uint8_t user_join_eui[8]     = FORMAT32_KEY(LORAWAN_JOIN_EUI);
 static uint8_t user_gen_app_key[16] = FORMAT_KEY(LORAWAN_GEN_APP_KEY);
 static uint8_t user_app_key[16]     = FORMAT_KEY(LORAWAN_APP_KEY);
 /**
@@ -616,12 +614,7 @@ static void EventCallback(void)
       case SMTC_MODEM_EVENT_RESET:
         APP_LOG(TS_OFF, VLEVEL_M, "Event received: RESET\r\n");
 
-        GetUniqueId(user_dev_eui);  // 보드 고유 DevEUI 사용
-
-        APP_LOG(TS_OFF, VLEVEL_M,
-                "USER_DEV_EUI CHECK: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X\r\n",
-                user_dev_eui[0], user_dev_eui[1], user_dev_eui[2], user_dev_eui[3],
-                user_dev_eui[4], user_dev_eui[5], user_dev_eui[6], user_dev_eui[7]);
+        GetUniqueId(user_dev_eui);
 
         /* Set user credentials */
         ASSERT_SMTC_MODEM_RC(smtc_modem_set_deveui(stack_id, user_dev_eui));
@@ -630,17 +623,7 @@ static void EventCallback(void)
         ASSERT_SMTC_MODEM_RC(smtc_modem_set_nwkkey(stack_id, user_app_key));
 
         /* Set user region */
-        ASSERT_SMTC_MODEM_RC(
-            smtc_modem_set_region(stack_id, LORAMAC_REGION_AS923_GRP1));
-
-        smtc_modem_region_t check_region;
-
-        ASSERT_SMTC_MODEM_RC(
-            smtc_modem_get_region(stack_id, &check_region));
-
-        APP_LOG(TS_OFF, VLEVEL_M,
-                "Current region TEST: %d\r\n",
-                check_region);
+        ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, LORAMAC_REGION_AS923_GRP1));
 
         /* Print Security material */
         SecureElementPrintKeys(stack_id);
@@ -709,46 +692,12 @@ static void EventCallback(void)
         break;
 
       case SMTC_MODEM_EVENT_JOINFAIL:
-      {
         APP_LOG(TS_OFF, VLEVEL_M,  "Event received: JOINFAIL\r\n");
         smtc_modem_get_status(STACK_ID, &status_mask);
+        /* USER CODE BEGIN EventCallback_4 */
 
-        MX_USART1_UART_Init();
-        int16_t test_distance = ReadUltrasonicDistance();
-        int16_t test_water_level = ConvertDistanceToWaterLevel(test_distance);
-
-        APP_LOG(TS_OFF, VLEVEL_M, "Raw Distance TEST: %d mm\r\n", test_distance);
-        APP_LOG(TS_OFF, VLEVEL_M, "Water Level TEST: %d mm\r\n", test_water_level);
-
-        APP_LOG(TS_OFF, VLEVEL_M,
-                "DB_MANUAL_INPUT raw_distance_mm=%d, water_level_mm=%d\r\n",
-                test_distance,
-                test_water_level);
-
-
-        uint8_t test_payload[2];
-        int16_t payload_water_level = test_water_level;
-
-        if (payload_water_level < 0)
-        {
-          payload_water_level = 0;
-        }
-
-        test_payload[0] = (uint8_t)((payload_water_level >> 8) & 0xFF);
-        test_payload[1] = (uint8_t)(payload_water_level & 0xFF);
-
-        APP_LOG(TS_OFF, VLEVEL_M,
-                "LoRa Payload TEST HEX: %02X %02X, Size: 2\r\n",
-                test_payload[0],
-                test_payload[1]);
-
-
-        if ((!JoinLedTimer.IsRunning) && (status_mask & SMTC_MODEM_STATUS_JOINED) != SMTC_MODEM_STATUS_JOINED)
-        {
-          UTIL_TIMER_Start(&JoinLedTimer);
-        }
+        /* USER CODE END EventCallback_4 */
         break;
-      }
 
       case SMTC_MODEM_EVENT_ALCSYNC_TIME:
         APP_LOG(TS_OFF, VLEVEL_M,  "Event received: ALCSync service TIME\r\n");
@@ -930,15 +879,6 @@ static int16_t ConvertDistanceToWaterLevel(int16_t raw_distance_mm)
 
 static void SendTxData(uint8_t port)
 {
-  APP_LOG(TS_ON, VLEVEL_M, "=== SendTxData Called ===\r\n");
-  smtc_modem_status_mask_t status_mask = 0;
-  smtc_modem_get_status(STACK_ID, &status_mask);
-
-  APP_LOG(TS_ON, VLEVEL_M,
-          "JOIN STATUS: %s\r\n",
-          ((status_mask & SMTC_MODEM_STATUS_JOINED) == SMTC_MODEM_STATUS_JOINED)
-          ? "JOINED" : "NOT JOINED");
-
   /* USER CODE BEGIN SendTxData_1 */
   uint8_t batteryLevel = GetBatteryLevel();
   sensor_t sensor_data;
