@@ -8,10 +8,31 @@ const SURFACE_STATUS_OPTIONS = [
 ]
 
 const SURFACE_STATUS_OPTIONS_AUTO = [
-  { label: 'low', value: 'WATER_VISIBLE' },
-  { label: 'mid', value: 'NO_WATER_VISIBLE' },
-  { label: 'high', value: 'UNKNOWN' },
+  { label: '물 있음', value: 'WATER_VISIBLE' },
+  { label: '물 없음', value: 'NO_WATER_VISIBLE' },
+  { label: '애매함', value: 'UNKNOWN' },
 ]
+
+const STATUS_ALIAS_MAP: Record<string, 'WATER_VISIBLE' | 'NO_WATER_VISIBLE' | 'UNKNOWN'> = {
+  WATER_VISIBLE: 'WATER_VISIBLE',
+  NO_WATER_VISIBLE: 'NO_WATER_VISIBLE',
+  UNKNOWN: 'UNKNOWN',
+  LOW: 'WATER_VISIBLE',
+  MID: 'UNKNOWN',
+  HIGH: 'NO_WATER_VISIBLE',
+}
+
+function normalizeStatusValue(raw?: string): 'WATER_VISIBLE' | 'NO_WATER_VISIBLE' | 'UNKNOWN' {
+  const key = (raw ?? '').toUpperCase()
+  return STATUS_ALIAS_MAP[key] ?? 'UNKNOWN'
+}
+
+function toKoreanStatusLabel(raw?: string): string {
+  const normalized = normalizeStatusValue(raw)
+  if (normalized === 'WATER_VISIBLE') return '물 있음'
+  if (normalized === 'NO_WATER_VISIBLE') return '물 없음'
+  return '애매함'
+}
 
 const ANGLE_OPTIONS = ['수직', '좌', '우', '기타']
 const DISTANCE_OPTIONS = ['50cm', '80cm', '110cm', '140cm', '170cm', '200cm', '기타']
@@ -115,7 +136,7 @@ export default function ValidationPage() {
   }
 
   const filteredRecords = records
-    .filter(r => filterStatus ? r.observed_surface_status === filterStatus : true)
+    .filter(r => filterStatus ? normalizeStatusValue(r.observed_surface_status) === filterStatus : true)
     .filter(r => filterDate ? r.record_date === filterDate : true)
 
   const handleConditionToggle = (c: string) => {
@@ -310,8 +331,13 @@ export default function ValidationPage() {
                       </div>
                     </div>
                     <p style={{ fontSize: '11px', color: '#888', marginBottom: '2px' }}>
+<<<<<<< Updated upstream
                       사람: {SURFACE_STATUS_OPTIONS.find(s => s.value === record.observed_surface_status)?.label ?? record.observed_surface_status}
 {record.ai_predicted_status && ` · AI: ${SURFACE_STATUS_OPTIONS_AUTO.find(s => s.value === record.ai_predicted_status)?.label ?? record.ai_predicted_status}`}
+=======
+                      사람: {toKoreanStatusLabel(record.observed_surface_status)}
+                      {record.ai_predicted_status && ` · AI: ${toKoreanStatusLabel(record.ai_predicted_status)}`}
+>>>>>>> Stashed changes
                       {record.ai_confidence != null && ` · 신뢰도 ${record.ai_confidence}%`}
                     </p>
                     {record.note && <p style={{ fontSize: '11px', color: '#aaa' }}>{record.note}</p>}
