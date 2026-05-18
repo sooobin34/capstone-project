@@ -478,9 +478,11 @@ def analyze_validation_image(
     try:
         result = predict_water_level(str(local_path))
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=502,
-            detail=f"AI image analysis failed: {exc}"
+            detail=f"AI image analysis failed: {type(exc).__name__}: {exc}"
         ) from exc
 
     ai_status = result.get("predicted_class")  # LOW / MID / HIGH
