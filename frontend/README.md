@@ -118,8 +118,4 @@ VITE_API_URL=https://capstone-project-54l6.onrender.com
 ---
 
 ## 7. 미해결 / 개선 예정
-
-- 카카오맵 API 연동 (한국어 지도, 구름 없는 스카이뷰)
-- 검증 사진 영구 저장 (현재 Render 무료플랜 한계 → S3 등 외부 스토리지 필요)
-- AI 분석 기능 (백엔드 OpenAI API 키 설정 필요)
 - LoRa 웹훅 API 연동 후 노드 센서 데이터 자동 표시
