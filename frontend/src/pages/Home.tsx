@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TrendChart from '../components/dashboard/TrendChart'
 import AlarmSummaryCard from '../components/dashboard/AlarmSummaryCard'
 import MrvSummaryCard from '../components/dashboard/MrvSummaryCard'
-import { getDashboard, getSensorLogsRange, mapWaterStatus, getFields, getNodes, getNodeStatus, getAlerts } from '../api/dashboard'
+import { getDashboard, getSensorLogsRange, mapWaterStatus, getFields, getNodes, getNodeStatus, getAlerts, getMrvReports } from '../api/dashboard'
 import FieldMap from '../components/map/FieldMap'
 
 export default function Home() {
@@ -21,6 +21,9 @@ export default function Home() {
   const [selectedAlerts, setSelectedAlerts] = useState<any[]>([])
   const [selectedAlertTotal, setSelectedAlertTotal] = useState<number | null>(null)
   const [selectedAlertUnresolved, setSelectedAlertUnresolved] = useState<number | null>(null)
+  const [selectedMrv, setSelectedMrv] = useState<any>(null)
+
+  const isMobile = window.innerWidth <= 768
 
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
@@ -53,6 +56,22 @@ export default function Home() {
         setSelectedAlertTotal(alerts.length)
         setSelectedAlertUnresolved(alerts.filter((a: any) => !a.is_resolved).length)
       }).catch(console.error)
+      getMrvReports(Number(selectedFieldId)).then(reports => {
+        if (reports.length > 0) {
+          const latest = reports.sort((a: any, b: any) =>
+            b.report_month.localeCompare(a.report_month)
+          )[0]
+          setSelectedMrv({
+            id: latest.id,
+            fieldName: latest.field_name,
+            reportMonth: latest.report_month,
+            awdCount: latest.total_awd_cycles,
+            carbonReduction: latest.carbon_reduction,
+          })
+        } else {
+          setSelectedMrv(null)
+        }
+      }).catch(console.error)
     } else {
       setNodes([])
       setSelectedNodeId('')
@@ -61,6 +80,7 @@ export default function Home() {
       setSelectedAlerts([])
       setSelectedAlertTotal(null)
       setSelectedAlertUnresolved(null)
+      setSelectedMrv(null)
     }
   }, [selectedFieldId])
 
@@ -107,7 +127,7 @@ export default function Home() {
   const alertUnresolved = selectedAlertUnresolved !== null ? selectedAlertUnresolved : dashboard?.unresolved_alerts ?? 0
   const recentAlerts = selectedAlerts.length > 0 ? selectedAlerts : dashboard?.recent_alerts ?? []
 
-  const latestMrv = dashboard?.latest_mrv_report
+  const latestMrv = selectedMrv !== null ? selectedMrv : dashboard?.latest_mrv_report
     ? {
         id: dashboard.latest_mrv_report.id,
         fieldName: dashboard.latest_mrv_report.field_name,
@@ -138,6 +158,116 @@ export default function Home() {
     </div>
   )
 
+  // 모바일 레이아웃
+  if (isMobile) {
+    return (
+      <div style={{ padding: '12px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+        {/* 스탯 카드 2x2 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          {[
+            { label: '전체 논', value: `${dashboard?.total_fields ?? 0}개` },
+            { label: '전체 기기', value: `${dashboard?.total_nodes ?? 0}대` },
+            { label: '미해결 알람', value: `${alertUnresolved}건`, danger: alertUnresolved > 0 },
+            { label: '최근 측정', value: latestMeasured },
+          ].map((card) => (
+            <div key={card.label} style={{
+              background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '10px', padding: '10px 12px',
+            }}>
+              <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>{card.label}</p>
+              <p style={{ fontSize: '18px', fontWeight: 500, color: card.danger ? '#c62828' : '#222' }}>{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 현재 수위 */}
+        <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px' }}>
+          <p style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>현재 수위 · {fieldName}</p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '32px', fontWeight: 500 }}>{latestLevel > 0 ? `+${latestLevel}` : latestLevel}</span>
+            <span style={{ fontSize: '14px', color: '#888' }}>cm</span>
+          </div>
+          <span style={{
+            display: 'inline-block', fontSize: '12px', padding: '3px 10px', borderRadius: '20px', fontWeight: 500,
+            background: statusColor + '20', color: statusColor,
+          }}>{latestStatus}</span>
+        </div>
+
+        {/* 24시간 통계 */}
+        <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px' }}>
+          <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>24시간 통계</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
+            {[
+              { label: '평균', value: `${dashboard?.latest_daily_summary?.avg_inner_level ?? 0}cm` },
+              { label: '최고', value: `${dashboard?.latest_daily_summary?.max_inner_level ?? 0}cm` },
+              { label: '최저', value: `${dashboard?.latest_daily_summary?.min_inner_level ?? 0}cm` },
+              { label: '알람', value: `${alertUnresolved}건` },
+            ].map((item) => (
+              <div key={item.label} style={{ background: '#f5f5f5', borderRadius: '8px', padding: '8px 6px', textAlign: 'center' }}>
+                <p style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>{item.label}</p>
+                <p style={{ fontSize: '13px', fontWeight: 500 }}>{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 논/노드 선택 + 지도 */}
+        <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <select
+              value={selectedFieldId}
+              onChange={(e) => { setSelectedFieldId(e.target.value ? Number(e.target.value) : ''); setSelectedNodeId('') }}
+              style={{ flex: 1, fontSize: '12px', padding: '6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5' }}
+            >
+              <option value="">논 선택</option>
+              {fields.map((f) => <option key={f.id} value={f.id}>{f.field_name}</option>)}
+            </select>
+            <select
+              value={selectedNodeId}
+              onChange={(e) => setSelectedNodeId(e.target.value ? Number(e.target.value) : '')}
+              style={{ flex: 1, fontSize: '12px', padding: '6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5' }}
+            >
+              <option value="">노드 선택</option>
+              {nodes.map((n) => <option key={n.id} value={n.id}>Node {n.id}</option>)}
+            </select>
+          </div>
+          <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden' }}>
+            {fields.length > 0 ? (
+              <FieldMap
+                sensors={[]}
+                center={[
+                  fields.find(f => f.id === Number(selectedFieldId))?.latitude ?? fields[0].latitude,
+                  fields.find(f => f.id === Number(selectedFieldId))?.longitude ?? fields[0].longitude,
+                ]}
+              />
+            ) : (
+              <div style={{ height: '100%', background: '#f5f5f5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', color: '#888' }}>논 {dashboard?.total_fields ?? 0}개 등록됨</span>
+              </div>
+            )}
+          </div>
+          <p onClick={() => navigate('/map')} style={{ fontSize: '11px', color: '#1D9E75', cursor: 'pointer', margin: 0 }}>지도 보기 →</p>
+        </div>
+
+        {/* 수위 추이 그래프 */}
+        <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '14px', height: '220px', display: 'flex', flexDirection: 'column' }}>
+          <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>수위 추이 (24시간)</p>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <TrendChart data={chartData} labels={chartLabels} />
+          </div>
+        </div>
+
+        {/* 알람 요약 */}
+        <AlarmSummaryCard totalCount={alertTotal} unresolvedCount={alertUnresolved} recentAlerts={recentAlerts} />
+
+        {/* MRV 요약 */}
+        <MrvSummaryCard report={latestMrv} onNavigate={() => navigate('/mrv')} />
+
+      </div>
+    )
+  }
+
+  // PC 레이아웃
   return (
     <div style={{
       padding: '12px 24px',
@@ -146,7 +276,7 @@ export default function Home() {
       height: 'calc(100vh - 48px)',
       display: 'grid',
       gridTemplateColumns: '1fr 1.2fr 1.5fr',
-      gridTemplateRows:'auto 1fr',
+      gridTemplateRows: 'auto 1fr',
       gap: '10px',
       boxSizing: 'border-box',
       overflow: 'hidden',
@@ -161,14 +291,8 @@ export default function Home() {
           { label: '최근 측정', value: latestMeasured },
         ].map((card) => (
           <div key={card.label} style={{
-            background: 'white',
-            border: '0.5px solid #e0e0e0',
-            borderRadius: '10px',
-            padding: '8px 12px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
+            background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '10px', padding: '8px 12px',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',
           }}>
             <p style={{ fontSize: '11px', color: '#888', marginBottom: '6px' }}>{card.label}</p>
             <p style={{ fontSize: '20px', fontWeight: 500, color: card.danger ? '#c62828' : '#222' }}>{card.value}</p>
@@ -181,7 +305,6 @@ export default function Home() {
         background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px',
         display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px',
       }}>
-        {/* 현재 수위 */}
         <div>
           <p style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>현재 수위 · {fieldName}</p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
@@ -193,10 +316,7 @@ export default function Home() {
             background: statusColor + '20', color: statusColor,
           }}>{latestStatus}</span>
         </div>
-
         <div style={{ height: '0.5px', background: '#e0e0e0' }} />
-
-        {/* 24시간 통계 */}
         <div>
           <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>24시간 통계</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
@@ -260,19 +380,12 @@ export default function Home() {
 
       {/* 좌측 하단: 알람요약 */}
       <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <AlarmSummaryCard
-          totalCount={alertTotal}
-          unresolvedCount={alertUnresolved}
-          recentAlerts={recentAlerts}
-        />
+        <AlarmSummaryCard totalCount={alertTotal} unresolvedCount={alertUnresolved} recentAlerts={recentAlerts} />
       </div>
 
       {/* 중앙 하단: MRV 요약 */}
       <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <MrvSummaryCard
-          report={latestMrv}
-          onNavigate={() => navigate('/mrv')}
-        />
+        <MrvSummaryCard report={latestMrv} onNavigate={() => navigate('/mrv')} />
       </div>
 
       {/* 우측 하단: 수위 추이 그래프 */}

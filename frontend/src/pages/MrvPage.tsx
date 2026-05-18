@@ -16,16 +16,10 @@ const SlideShow = ({ photos, onClickImage }: { photos: any[], onClickImage: (url
         />
         {photos.length > 1 && (
           <>
-            <button
-              onClick={() => setIdx(i => Math.max(0, i - 1))}
-              disabled={idx === 0}
-              style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', opacity: idx === 0 ? 0.3 : 1 }}
-            >‹</button>
-            <button
-              onClick={() => setIdx(i => Math.min(photos.length - 1, i + 1))}
-              disabled={idx === photos.length - 1}
-              style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', opacity: idx === photos.length - 1 ? 0.3 : 1 }}
-            >›</button>
+            <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}
+              style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', opacity: idx === 0 ? 0.3 : 1 }}>‹</button>
+            <button onClick={() => setIdx(i => Math.min(photos.length - 1, i + 1))} disabled={idx === photos.length - 1}
+              style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', opacity: idx === photos.length - 1 ? 0.3 : 1 }}>›</button>
           </>
         )}
       </div>
@@ -113,7 +107,7 @@ export default function MrvPage() {
     )
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
       <h2 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '12px' }}>MRV</h2>
       <div style={{
         background: '#e8f4fd', border: '0.5px solid #b3d9f7', borderRadius: '8px',
@@ -128,7 +122,7 @@ export default function MrvPage() {
           <select
             value={selectedFieldId}
             onChange={(e) => setSelectedFieldId(e.target.value ? Number(e.target.value) : '')}
-            style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }}
+            style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', flex: '1 1 120px' }}
           >
             <option value="">논 선택</option>
             {fields.map((f) => <option key={f.id} value={f.id}>{f.field_name}</option>)}
@@ -138,7 +132,7 @@ export default function MrvPage() {
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }}
+            style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', flex: '1 1 120px' }}
           />
 
           <button
@@ -148,7 +142,7 @@ export default function MrvPage() {
               fontSize: '13px', padding: '7px 16px', borderRadius: '8px',
               border: 'none', background: '#1D9E75', color: 'white',
               cursor: creating ? 'not-allowed' : 'pointer', fontWeight: 500,
-              opacity: creating ? 0.7 : 1,
+              opacity: creating ? 0.7 : 1, whiteSpace: 'nowrap',
             }}
           >
             {creating ? '생성 중...' : '보고서 생성'}
@@ -165,6 +159,7 @@ export default function MrvPage() {
                   background: sortOrder === order ? '#f0f0f0' : 'white',
                   fontWeight: sortOrder === order ? 500 : 400,
                   color: sortOrder === order ? '#222' : '#888',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {order === 'newest' ? '최신순' : '날짜순'}
@@ -188,8 +183,11 @@ export default function MrvPage() {
 
       {/* 논 선택 시 하단 섹션 */}
       {selectedFieldId && filtered.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
-
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '16px', marginTop: '16px'
+        }}>
           {/* AI 일치도 분석 */}
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px' }}>
             <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '12px' }}>AI 일치도 분석</p>
@@ -221,7 +219,6 @@ export default function MrvPage() {
               <p style={{ fontSize: '13px', color: '#aaa', textAlign: 'center', padding: '16px 0' }}>검증 사진 없음</p>
             )}
           </div>
-
         </div>
       )}
 
