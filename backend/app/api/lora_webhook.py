@@ -67,7 +67,7 @@ def parse_water_level_cm(raw: bytes) -> Decimal:
     if len(raw) < 2:
         raise HTTPException(status_code=400, detail="LoRa payload must contain at least 2 bytes.")
 
-    water_level_mm = int.from_bytes(raw[:2], byteorder="big", signed=False)
+    water_level_mm = int.from_bytes(raw[:2], byteorder="big", signed=True)
     return Decimal(water_level_mm) / Decimal("10")
 
 
