@@ -1,4 +1,20 @@
-# 검증 정확률 (Validation Accuracy) : 87.34%
+# =========================================================
+# train_water_classifier.py
+# =========================================================
+
+# 논 사진 데이터를 이용한 기본 수위 분류 모델 학습 코드
+# ResNet18 기반 전이학습(Transfer Learning) 사용
+# LOW / MID / HIGH 3단계 수위 상태 분류 수행
+#
+# train / val 데이터셋을 이용하여 학습하며,
+# 가장 높은 Validation Accuracy 모델을 저장함.
+#
+# 저장 모델:
+# models/water_classifier_best.pth
+#
+# 최종 기본 모델 성능:
+# Test Accuracy: 87.34%
+# =========================================================
 
 
 import os
