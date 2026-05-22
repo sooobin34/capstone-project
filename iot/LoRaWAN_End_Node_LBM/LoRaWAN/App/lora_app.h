@@ -39,7 +39,7 @@ extern "C" {
 /* Exported constants --------------------------------------------------------*/
 
 /* LoraWAN application configuration (Mw is configured by lorawan_conf.h) */
-#define ACTIVE_REGION                               LORAMAC_REGION_AS923_GRP1
+#define ACTIVE_REGION                               LORAMAC_REGION_KR920
 
 /* USER CODE BEGIN EC_CAYENNE_LPP */
 /*!

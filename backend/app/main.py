@@ -73,5 +73,3 @@ def db_test():
         "result": value
     }
 
-
-

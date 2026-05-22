@@ -623,7 +623,8 @@ static void EventCallback(void)
         ASSERT_SMTC_MODEM_RC(smtc_modem_set_nwkkey(stack_id, user_app_key));
 
         /* Set user region */
-        ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, LORAMAC_REGION_AS923_GRP1));
+        // ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, ACTIVE_REGION));
+        ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, LORAMAC_REGION_KR920));
 
         /* Print Security material */
         SecureElementPrintKeys(stack_id);
@@ -883,7 +884,8 @@ static void SendTxData(uint8_t port)
   uint8_t batteryLevel = GetBatteryLevel();
   sensor_t sensor_data;
   uint8_t bufferSize = 0;
-  smtc_modem_region_t region = LORAMAC_REGION_EU868;
+  // smtc_modem_region_t region = LORAMAC_REGION_AS923_GRP1;
+  smtc_modem_region_t region = LORAMAC_REGION_KR920;
 
 #ifdef CAYENNE_LPP
   uint8_t channel = 0;
@@ -947,11 +949,6 @@ static void SendTxData(uint8_t port)
    */
 
   int16_t payload_water_level = water_level_mm;
-
-  if (payload_water_level < 0)
-  {
-    payload_water_level = 0;
-  }
 
   AppDataBuffer[i++] = (uint8_t)((payload_water_level >> 8) & 0xFF);
   AppDataBuffer[i++] = (uint8_t)(payload_water_level & 0xFF);
