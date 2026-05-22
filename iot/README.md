@@ -2,47 +2,131 @@
 - LoRaWAN_End_Node_LBM : LoRaWAN uplink 테스트용
 - 현재 증상 : JOINFAIL 반복 / RX timeout
 
+## LoRaWAN Gateway 현재 진행 상황
 
-## IoT / LoRaWAN 확인 필요 사항
+### 현재 환경
+- STM32WL55JC1
+- RAK7268V2 Built-in LoRa Server
+- OTAA 사용
+- Region: KR920
 
-현재 STM32 보드와 LoRa 게이트웨이를 다시 연결해 실시간 로그를 확인하지 못한 상태이므로 정확한 원인은 아직 확정하지 못했습니다.
+---
 
-다만 이전 Tera Term 로그 기준으로는 초음파 센서값 읽기, Water Level 계산, LoRa Payload 생성, TX DONE까지는 확인되었습니다.  
-이후 RX1/RX2 timeout이 발생하고 `JOINFAIL`이 반복되는 상황이었습니다.
+## 현재 정상 동작 확인된 부분
 
-### 수정 및 확인한 주요 파일
+### 1. 초음파 센서 UART 통신 정상
+STM32에서 초음파 센서 데이터를 정상적으로 수신하고 있음.
 
-- `lora_app.c`
-  - 초음파 센서 UART 수신
-  - 수위값 변환
-  - LoRa Payload 생성
-  - Join 및 Uplink 요청 흐름 확인
+Tera Term 로그에서 아래 내용 확인:
+- RX header TEST: 0xFF
+- Packet TEST: FF 08 A3 AA
+- Raw Distance 계산
+- Water Level 계산
+- LoRa Payload 생성
 
-- `se-identity.h`
-  - DevEUI
-  - JoinEUI(AppEUI)
-  - AppKey 설정 확인
+예시:
+LoRa Payload HEX: FF 38
 
-- `lorawan_conf.h`
-  - Region 설정 확인
-  - AS923 / KR920 설정 확인 필요
+---
 
-- `Commissioning.h`
-  - `se-identity.h` 포함 여부 확인
+### 2. LoRaWAN Join 성공
+LoRaWAN Join 과정 정상 확인.
 
-- `backend/app/api/lora_webhook.py`
-  - LoRa webhook 수신
-  - payload decode
-  - DB 저장 처리
+Tera Term 로그:
+Event received: JOINED
+Event received: TXDONE
 
-### 현재 의심되는 부분
+---
 
-- 단말과 게이트웨이 간 Region 설정 불일치
-- Sync Word 불일치 가능성
-- DevEUI / JoinEUI / AppKey 불일치 가능성
-- DevEUI 또는 AppKey 바이트오더 문제
-- 게이트웨이에서 JoinRequest가 실제로 수신되는지 확인 필요
-- JoinRequest는 보이나 JoinAccept가 오지 않는 경우 서버 키 설정 확인 필요
+### 3. 게이트웨이 RF 수신 정상
+RAK7268V2 게이트웨이에서 RF uplink 패킷 수신 확인.
+
+게이트웨이 시스템 로그:
+Permitted to join
+Mote 0080e115061bf02c Joined addr 021f5525
+
+RF 관련 로그:
+- RF packets received by concentrator 증가 확인
+- RF packets forwarded 증가 확인
+
+즉 STM32 uplink 자체는 게이트웨이까지 정상적으로 전달되는 것으로 보임.
+
+---
+
+## 현재 문제 상황
+
+Join 및 uplink 전송은 성공하지만,
+sensor uplink 데이터가 backend/database까지 전달되지 않는 상황.
+
+### 1. MQTT Explorer 확인 결과
+- application/.../join 토픽은 생성됨
+- application/.../rx 토픽은 생성되지 않음
+
+### 2. Render webhook 로그
+join 이벤트는 정상 수신됨:
+POST /lora-webhook?event=up
+
+하지만 body에는:
+- devEUI
+- devAddr
+
+만 존재하며 아래 필드가 없음:
+- data
+- fPort
+
+예시:
+{
+  "applicationID":"1",
+  "applicationName":"SensorApp",
+  "deviceName":"NUCLEO_WL55JC1",
+  "devEUI":"0080e115061bf02c",
+  "timestamp":1779362824,
+  "devAddr":"021f5525"
+}
+
+### 3. Packet Capture 확인 결과
+Packet Capture 화면에서도 uplink payload(rx)가 표시되지 않음.
+
+---
+
+## 현재 의심되는 원인
+
+현재까지 확인된 정상 동작:
+- STM32 UART 센서 수신
+- Water Level 계산
+- Payload 생성
+- LoRaWAN Join
+- RF uplink 전송
+- Gateway RF 수신
+
+현재 의심되는 부분:
+- RAK7268V2 Built-in Network Server/App Server
+- uplink rx publish 문제
+- HTTP forwarding 문제
+
+즉 RF uplink 자체는 정상 동작하지만,
+게이트웨이 내부 Application Server 단계에서 uplink payload 전달이 이루어지지 않는 것으로 추정 중.
+
+---
+
+## 현재 설정 상태
+
+- Region: KR920
+- OTAA 사용
+- HTTP Integration ON
+- MQTT Uplink Topic 기본값 사용
+
+application/{{application_name}}/device/{{device_EUI}}/rx
+
+---
+
+## 추가 진행 시도 사항
+
+외부 ChirpStack 환경도 시도하였으나:
+- Oracle VM 계정 생성 문제
+- VMware 네트워크/IP 할당 문제
+
+등으로 인해 아직 구축하지 못한 상태.
 
 ### 다음 확인 순서
 
