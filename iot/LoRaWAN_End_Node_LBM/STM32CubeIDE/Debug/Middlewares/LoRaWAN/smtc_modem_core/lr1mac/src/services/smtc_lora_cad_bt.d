@@ -88,6 +88,7 @@ Middlewares/LoRaWAN/smtc_modem_core/lr1mac/src/services/smtc_lora_cad_bt.o: \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h \
+ ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/services/smtc_lora_cad_bt.h
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/smtc_modem_hal_dbg_trace.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_hal/smtc_modem_hal.h:
@@ -182,4 +183,5 @@ Middlewares/LoRaWAN/smtc_modem_core/lr1mac/src/services/smtc_lora_cad_bt.o: \
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h:
+../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/services/smtc_lora_cad_bt.h:

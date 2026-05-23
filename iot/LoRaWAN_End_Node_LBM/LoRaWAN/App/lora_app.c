@@ -623,8 +623,7 @@ static void EventCallback(void)
         ASSERT_SMTC_MODEM_RC(smtc_modem_set_nwkkey(stack_id, user_app_key));
 
         /* Set user region */
-        // ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, ACTIVE_REGION));
-        ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, LORAMAC_REGION_KR920));
+        ASSERT_SMTC_MODEM_RC(smtc_modem_set_region(stack_id, ACTIVE_REGION));
 
         /* Print Security material */
         SecureElementPrintKeys(stack_id);
@@ -881,10 +880,12 @@ static int16_t ConvertDistanceToWaterLevel(int16_t raw_distance_mm)
 static void SendTxData(uint8_t port)
 {
   /* USER CODE BEGIN SendTxData_1 */
+
   uint8_t batteryLevel = GetBatteryLevel();
   sensor_t sensor_data;
   uint8_t bufferSize = 0;
-  // smtc_modem_region_t region = LORAMAC_REGION_AS923_GRP1;
+
+  //smtc_modem_region_t region = LORAMAC_REGION_AS923_GRP1;
   smtc_modem_region_t region = LORAMAC_REGION_KR920;
 
 #ifdef CAYENNE_LPP
@@ -901,13 +902,15 @@ static void SendTxData(uint8_t port)
   smtc_modem_get_region(STACK_ID, &region);
 
 #ifdef CAYENNE_LPP
+
   CayenneLppReset();
   CayenneLppAddBarometricPressure(channel++, sensor_data.pressure);
   CayenneLppAddTemperature(channel++, sensor_data.temperature);
   CayenneLppAddRelativeHumidity(channel++, (uint16_t)(sensor_data.humidity));
 
-  if ((region == LORAMAC_REGION_US915) || (region == LORAMAC_REGION_AU915)
-      || (region == LORAMAC_REGION_AS923_GRP1))
+  if ((region == LORAMAC_REGION_US915) ||
+      (region == LORAMAC_REGION_AU915) ||
+      (region == LORAMAC_REGION_AS923_GRP1))
   {
     CayenneLppAddDigitalInput(channel++, GetBatteryLevel());
     CayenneLppAddDigitalOutput(channel++, AppLedStateOn);
@@ -916,85 +919,126 @@ static void SendTxData(uint8_t port)
   CayenneLppCopy(AppDataBuffer);
   bufferSize = CayenneLppGetSize();
 
+#else  /* not CAYENNE_LPP */
 
-  #else  /* not CAYENNE_LPP */
-  HAL_Delay(1000);   // 추가: 리셋/송신 전 센서 안정화 대기
+  HAL_Delay(1000);
+
   MX_USART1_UART_Init();
+
   __HAL_UART_FLUSH_DRREGISTER(&huart1);
 
   int16_t raw_distance_mm = ReadUltrasonicDistance();
+
   int16_t water_level_mm = ConvertDistanceToWaterLevel(raw_distance_mm);
 
   g_distance_mm = raw_distance_mm;
 
-  APP_LOG(TS_ON, VLEVEL_M, "Raw Distance: %d mm\r\n", raw_distance_mm);
-  APP_LOG(TS_ON, VLEVEL_M, "Water Level: %d mm\r\n", water_level_mm);
+  /*
+   * LoRa payload format
+   *
+   * Byte 0 : high byte
+   * Byte 1 : low byte
+   */
+
+  int16_t payload_water_level = water_level_mm;
+
+  AppDataBuffer[i++] =
+      (uint8_t)((payload_water_level >> 8) & 0xFF);
+
+  AppDataBuffer[i++] =
+      (uint8_t)(payload_water_level & 0xFF);
+
+  bufferSize = i;
+
+#endif /* CAYENNE_LPP */
+
+  if (JoinLedTimer.IsRunning)
+  {
+    UTIL_TIMER_Stop(&JoinLedTimer);
+
+    HAL_GPIO_WritePin(
+        LED3_GPIO_Port,
+        LED3_Pin,
+        GPIO_PIN_RESET);
+  }
+
+  smtc_modem_status_mask_t tx_status_mask = 0;
+
+  smtc_modem_get_status(STACK_ID, &tx_status_mask);
+
+  APP_LOG(TS_ON, VLEVEL_M,
+          "\r\n========================================\r\n");
+
+  APP_LOG(TS_ON, VLEVEL_M,
+          "10 SECOND PERIODIC UPLINK\r\n");
+
+  if ((tx_status_mask & SMTC_MODEM_STATUS_JOINED)
+      == SMTC_MODEM_STATUS_JOINED)
+  {
+    APP_LOG(TS_ON, VLEVEL_M,
+            "JOIN STATUS : JOINED\r\n");
+  }
+  else
+  {
+    APP_LOG(TS_ON, VLEVEL_M,
+            "JOIN STATUS : NOT JOINED\r\n");
+  }
+
+  APP_LOG(TS_ON, VLEVEL_M,
+          "Raw Distance : %d mm\r\n",
+          raw_distance_mm);
+
+  APP_LOG(TS_ON, VLEVEL_M,
+          "Water Level : %d mm\r\n",
+          water_level_mm);
 
   APP_LOG(TS_ON, VLEVEL_M,
           "DB_MANUAL_INPUT raw_distance_mm=%d, water_level_mm=%d\r\n",
           raw_distance_mm,
           water_level_mm);
 
-  /*
-   * LoRa payload format:
-   * Byte 0: payload_water_level high byte
-   * Byte 1: payload_water_level low byte
-   *
-   * DB_MANUAL_INPUT에는 음수 수위도 그대로 출력한다.
-   * LoRa payload에는 음수값을 보내지 않기 위해 0으로 보정한 값을 넣는다.
-   *
-   * Example:
-   * water_level_mm = 100 mm = 0x0064
-   * payload = 00 64
-   */
-
-  int16_t payload_water_level = water_level_mm;
-
-  AppDataBuffer[i++] = (uint8_t)((payload_water_level >> 8) & 0xFF);
-  AppDataBuffer[i++] = (uint8_t)(payload_water_level & 0xFF);
-
-
-  bufferSize = i;
-
-  /*
   APP_LOG(TS_ON, VLEVEL_M,
-          "LoRa Payload HEX: %02X %02X, Size: %d\r\n",
-          AppDataBuffer[0],
-          AppDataBuffer[1],
-          bufferSize); */
-
-#endif /* CAYENNE_LPP */
-
-
-  if (JoinLedTimer.IsRunning)
-  {
-    UTIL_TIMER_Stop(&JoinLedTimer);
-    HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); /* LED_RED */
-  }
-
-  APP_LOG(TS_ON, VLEVEL_M,
-          "LoRa Payload HEX: %02X %02X, Size: %d\r\n",
+          "LoRa Payload HEX : %02X %02X, Size : %d\r\n",
           AppDataBuffer[0],
           AppDataBuffer[1],
           bufferSize);
 
-  ASSERT_SMTC_MODEM_RC(smtc_modem_request_uplink(STACK_ID, port, false, AppDataBuffer, bufferSize));
+  APP_LOG(TS_ON, VLEVEL_M,
+          "========================================\r\n\r\n");
+
+  ASSERT_SMTC_MODEM_RC(
+      smtc_modem_request_uplink(
+          STACK_ID,
+          port,
+          false,
+          AppDataBuffer,
+          bufferSize));
 
   if (EventType == TX_ON_TIMER)
   {
     smtc_modem_status_mask_t status_mask = 0;
+
     smtc_modem_get_status(STACK_ID, &status_mask);
-    /* Restart periodical uplink alarm */
-    /* It is set value by default APP_TX_DUTYCYCLE. If Certification mode is enabled or during join phase, the time is 10s */
-    if (CertMode || ((status_mask & SMTC_MODEM_STATUS_JOINED) != SMTC_MODEM_STATUS_JOINED))
+
+    /*
+     * 10 second periodic uplink
+     */
+
+    if (CertMode ||
+        ((status_mask & SMTC_MODEM_STATUS_JOINED)
+         != SMTC_MODEM_STATUS_JOINED))
     {
-      ASSERT_SMTC_MODEM_RC(smtc_modem_alarm_start_timer(CERT_TX_DUTYCYCLE));
+      ASSERT_SMTC_MODEM_RC(
+          smtc_modem_alarm_start_timer(
+              CERT_TX_DUTYCYCLE));
     }
     else
     {
-      ASSERT_SMTC_MODEM_RC(smtc_modem_alarm_start_timer(APP_TX_DUTYCYCLE));
+      ASSERT_SMTC_MODEM_RC(
+          smtc_modem_alarm_start_timer(10));
     }
   }
+
   /* USER CODE END SendTxData_1 */
 }
 

@@ -22,6 +22,7 @@ Middlewares/LoRaWAN/smtc_modem_core/modem_supervisor/modem_tx_protocol_manager.o
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h \
+ ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/modem_services_config.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lorawan_packages/lorawan_certification/lorawan_certification.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lorawan_manager/lorawan_join_management.h \
@@ -130,6 +131,7 @@ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Th
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h:
+../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/modem_services_config.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lorawan_packages/lorawan_certification/lorawan_certification.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lorawan_manager/lorawan_join_management.h:

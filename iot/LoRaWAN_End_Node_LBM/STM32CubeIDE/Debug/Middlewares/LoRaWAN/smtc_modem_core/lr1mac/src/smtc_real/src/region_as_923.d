@@ -81,6 +81,7 @@ Middlewares/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923.o: \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real_defs.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h \
+ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1_stack_mac_layer.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real_defs.h \
  ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner.h \
@@ -177,6 +178,7 @@ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Th
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real_defs.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h:
+C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1_stack_mac_layer.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real_defs.h:
 ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner.h:

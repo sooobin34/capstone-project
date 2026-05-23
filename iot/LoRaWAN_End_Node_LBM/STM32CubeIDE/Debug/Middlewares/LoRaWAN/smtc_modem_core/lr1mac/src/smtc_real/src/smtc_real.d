@@ -10,6 +10,7 @@ Middlewares/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real.o: \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h \
+ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1_stack_mac_layer.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1mac_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real_defs.h \
@@ -95,7 +96,8 @@ Middlewares/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real.o: \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/lr1mac_config.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868.h \
  C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923.h \
- C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915.h
+ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915.h \
+ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920.h
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1mac_defs.h:
 ../../LoRaWAN/Target/lorawan_conf.h:
@@ -106,6 +108,7 @@ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Th
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h:
+C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1_stack_mac_layer.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/lr1mac_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/smtc_real_defs.h:
@@ -197,3 +200,4 @@ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Th
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923.h:
 C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915.h:
+C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920.h:

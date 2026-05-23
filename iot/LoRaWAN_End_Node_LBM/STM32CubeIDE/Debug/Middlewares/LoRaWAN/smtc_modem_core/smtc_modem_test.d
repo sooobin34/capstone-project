@@ -91,6 +91,7 @@ Middlewares/LoRaWAN/smtc_modem_core/smtc_modem_test.o: \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h \
+ ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/fifo_ctrl.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/modem_core.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/fifo_ctrl.h \
@@ -206,6 +207,7 @@ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Th
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h:
+../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/fifo_ctrl.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/modem_core.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/modem_utilities/fifo_ctrl.h:

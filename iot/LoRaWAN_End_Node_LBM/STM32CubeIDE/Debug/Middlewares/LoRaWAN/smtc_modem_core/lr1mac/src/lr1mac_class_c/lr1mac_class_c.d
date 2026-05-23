@@ -12,6 +12,7 @@ Middlewares/LoRaWAN/smtc_modem_core/lr1mac/src/lr1mac_class_c/lr1mac_class_c.o: 
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h \
  ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h \
+ ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h \
  ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner.h \
  ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner_types.h \
  ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner_hook_id_defs.h \
@@ -107,6 +108,7 @@ C:/Users/user/Downloads/stm32cubewl-v1-5-0/STM32Cube_FW_WL_V1.5.0/Middlewares/Th
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_eu_868_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_as_923_defs.h:
 ../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915_defs.h:
+../../../../../../../Middlewares/Third_Party/LoRaWAN/smtc_modem_core/lr1mac/src/smtc_real/src/region_kr_920_defs.h:
 ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner.h:
 ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner_types.h:
 ../../../../../../../Middlewares/Third_Party/SubGHz_Phy/lorawan/radio_planner/src/radio_planner_hook_id_defs.h:
