@@ -366,6 +366,60 @@ def get_validation_summary(
         "Validation summary loaded.",
     )
 
+
+# -------------------------
+# DELETE
+# -------------------------
+
+@router.delete("/{validation_id}")
+def delete_validation(validation_id: int, db: Session = Depends(get_db)):
+    record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Validation record not found.")
+
+    local_path = local_upload_path_from_url(record.image_url)
+    if local_path and local_path.exists():
+        try:
+            local_path.unlink()
+        except Exception:
+            pass
+
+    db.delete(record)
+    db.commit()
+
+    return success_response(None, "Validation record deleted.")
+
+
+@router.delete("/by-field/{field_id}")
+def delete_validations_by_field(field_id: int, db: Session = Depends(get_db)):
+    ensure_field_exists(db, field_id)
+
+    records = db.query(ValidationRecord).filter(
+        ValidationRecord.field_id == field_id
+    ).all()
+
+    deleted_count = 0
+
+    for record in records:
+        local_path = local_upload_path_from_url(record.image_url)
+        if local_path and local_path.exists():
+            try:
+                local_path.unlink()
+            except Exception:
+                pass
+
+        db.delete(record)
+        deleted_count += 1
+
+    db.commit()
+
+    return success_response(
+        {"deleted_count": deleted_count},
+        "Validation records deleted by field.",
+    )
+
+
 # -------------------------
 # GET ONE
 # -------------------------
@@ -538,3 +592,28 @@ def analyze_validation_image(
         },
         "Validation image analyzed.",
     )
+
+
+# -------------------------
+# DELETE
+# -------------------------
+
+@router.delete("/{validation_id}")
+def delete_validation(validation_id: int, db: Session = Depends(get_db)):
+    record = db.query(ValidationRecord).filter(ValidationRecord.id == validation_id).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Validation record not found.")
+
+    local_path = local_upload_path_from_url(record.image_url)
+    if local_path and local_path.exists():
+        try:
+            local_path.unlink()
+        except Exception:
+            pass
+
+    db.delete(record)
+    db.commit()
+
+    return success_response(None, "Validation record deleted.")
+
