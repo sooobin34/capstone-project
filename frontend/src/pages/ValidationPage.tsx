@@ -292,10 +292,6 @@ export default function ValidationPage() {
                             {record.ai_sensor_match ? 'AI-센서 일치' : 'AI-센서 불일치'}
                           </span>
                         )}
-
-                        {record.is_match !== null && record.is_match !== undefined && (
-                          ` · 센서-관찰: ${record.is_match ? '일치' : '불일치'}`
-                        )}
                         
                         <button onClick={() => handleAnalyze(record.id)} disabled={analyzingId === record.id}
                           style={{
