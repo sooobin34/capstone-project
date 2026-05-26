@@ -250,7 +250,7 @@ export default function ValidationPage() {
                 ))}
               </select>
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
-                style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }} />
+  style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', minWidth: '130px' }} />
               {(filterStatus || filterDate) && (
                 <button onClick={() => { setFilterStatus(''); setFilterDate('') }}
                   style={{ fontSize: '13px', padding: '5px 10px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', color: '#888' }}>
@@ -276,8 +276,8 @@ export default function ValidationPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', gap: '8px', flexWrap: 'wrap' }}>
                       <p style={{ fontSize: '15px', fontWeight: 500, wordBreak: 'break-word', margin: 0 }}>
-  {record.image_title || '제목 없음'} · {record.record_date}
-</p>
+                        {record.image_title || '제목 없음'} · {record.record_date}
+                      </p>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                         {record.is_match !== null && (
                           <span style={{
