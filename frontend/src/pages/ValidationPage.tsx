@@ -280,13 +280,23 @@ export default function ValidationPage() {
                         {record.image_title || '제목 없음'} · {record.record_date}
                       </p>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-                        {record.is_match !== null && (
+                        {record.ai_sensor_match !== null && record.ai_sensor_match !== undefined && (
                           <span style={{
-                            fontSize: '12px', padding: '2px 8px', borderRadius: '20px', fontWeight: 500,
-                            background: record.is_match ? '#e8f5e9' : '#fce4ec',
-                            color: record.is_match ? '#2e7d32' : '#c62828',
-                          }}>{record.is_match ? '일치' : '불일치'}</span>
+                            fontSize: '12px',
+                            padding: '2px 8px',
+                            borderRadius: '20px',
+                            fontWeight: 500,
+                            background: record.ai_sensor_match ? '#e8f5e9' : '#fce4ec',
+                            color: record.ai_sensor_match ? '#2e7d32' : '#c62828',
+                          }}>
+                            {record.ai_sensor_match ? 'AI-센서 일치' : 'AI-센서 불일치'}
+                          </span>
                         )}
+
+                        {record.is_match !== null && record.is_match !== undefined && (
+                          ` · 센서-관찰: ${record.is_match ? '일치' : '불일치'}`
+                        )}
+                        
                         <button onClick={() => handleAnalyze(record.id)} disabled={analyzingId === record.id}
                           style={{
                             fontSize: '12px', padding: '4px 10px', borderRadius: '8px',
