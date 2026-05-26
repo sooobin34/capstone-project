@@ -6,21 +6,21 @@ from datetime import datetime, timezone, timedelta
 KST = timezone(timedelta(hours=9))
 
 BASE_URL = "https://capstone-project-54l6.onrender.com"
-ENDPOINT = f"{BASE_URL}/sensor-logs"
+SENSOR_ENDPOINT = f"{BASE_URL}/sensor-logs"
+SUMMARY_ENDPOINT = f"{BASE_URL}/daily-summaries"
 
-NODE_IDS = [1,2,3,4,5,6,7]
+NODE_IDS = [7, 11, 12, 13, 14, 15, 16]
 
 START_DATE = datetime(2026, 5, 1, 0, 0, tzinfo=KST)
 END_DATE = datetime(2026, 6, 1, 0, 0, tzinfo=KST)
 
-INTERVAL_MINUTES = 60
-REQUEST_DELAY_SECONDS = 0.5
+INTERVAL_HOURS = 6
+REQUEST_DELAY_SECONDS = 1.0
 
 
 def generate_inner_water_level(measured_at: datetime) -> float:
     day = measured_at.day
 
-    # 월간 AWD 흐름 테스트용 패턴
     if 1 <= day <= 5:
         return round(random.uniform(1.0, 4.5), 2)       # FLOODED
     elif 6 <= day <= 10:
@@ -37,57 +37,83 @@ def generate_inner_water_level(measured_at: datetime) -> float:
         return round(random.uniform(-18.0, -15.5), 2)   # DRY
 
 
-def generate_mock_payload(node_id: int, measured_at: datetime):
-    inner_water_level = generate_inner_water_level(measured_at)
-    outer_water_level = round(random.uniform(-2.0, 8.0), 2)
-    battery_voltage = round(random.uniform(3.55, 3.75), 2)
+def send_sensor_log(node_id: int, measured_at: datetime):
+    inner = generate_inner_water_level(measured_at)
 
-    return {
+    payload = {
         "node_id": node_id,
-        "inner_water_level": inner_water_level,
-        "outer_water_level": outer_water_level,
-        "battery_voltage": battery_voltage,
+        "inner_water_level": inner,
+        "outer_water_level": round(inner + random.uniform(-0.8, 0.8), 2),
+        "battery_voltage": round(random.uniform(3.55, 3.75), 2),
         "measured_at": measured_at.isoformat()
     }
 
+    res = requests.post(SENSOR_ENDPOINT, json=payload, timeout=30)
 
-def send_mock_data(node_id: int, measured_at: datetime):
-    payload = generate_mock_payload(node_id, measured_at)
+    if res.status_code not in (200, 201):
+        print("센서 로그 실패")
+        print(payload)
+        print(res.status_code, res.text)
+        raise SystemExit
 
-    try:
-        response = requests.post(ENDPOINT, json=payload, timeout=30)
+    return True
 
-        if response.status_code not in (200, 201):
-            print("=" * 60)
-            print(f"node_id: {node_id}")
-            print("보낸 데이터:", payload)
-            print("status_code:", response.status_code)
-            print("response:", response.text)
-            raise SystemExit("전송 실패로 중단합니다.")
 
+def create_daily_summary(node_id: int, record_date):
+    payload = {
+        "node_id": node_id,
+        "record_date": record_date.isoformat(),
+        "verification_image_url": None
+    }
+
+    res = requests.post(SUMMARY_ENDPOINT, json=payload, timeout=30)
+
+    # 이미 생성된 경우 400이 나올 수 있으니 중단하지 않음
+    if res.status_code in (200, 201):
         return True
 
-    except requests.RequestException as e:
-        print("=" * 60)
-        print(f"node_id: {node_id}")
-        print("전송 실패:", e)
-        raise SystemExit("요청 오류로 중단합니다.")
+    if res.status_code == 400 and "이미 존재" in res.text:
+        print(f"이미 존재: node {node_id}, {record_date}")
+        return False
+
+    print("daily summary 실패")
+    print(payload)
+    print(res.status_code, res.text)
+    raise SystemExit
 
 
 if __name__ == "__main__":
-    current = START_DATE
     total = 0
+    current = START_DATE
+
+    print("1) sensor_logs mock 데이터 생성 시작")
 
     while current < END_DATE:
         for node_id in NODE_IDS:
-            send_mock_data(node_id, current)
+            send_sensor_log(node_id, current)
             total += 1
 
-            if total % 300 == 0:
-                print(f"{total}건 전송 완료 / 현재 시각: {current.isoformat()}")
+            if total % 100 == 0:
+                print(f"{total}건 전송 완료 / 현재: {current.isoformat()}")
 
             time.sleep(REQUEST_DELAY_SECONDS)
 
-        current += timedelta(minutes=INTERVAL_MINUTES)
+        current += timedelta(hours=INTERVAL_HOURS)
 
-    print(f"전체 전송 완료: {total}건")
+    print(f"sensor_logs 생성 완료: {total}건")
+
+    print("2) daily_summaries 생성 시작")
+
+    day = START_DATE.date()
+    end_day = END_DATE.date()
+
+    summary_total = 0
+    while day < end_day:
+        for node_id in NODE_IDS:
+            create_daily_summary(node_id, day)
+            summary_total += 1
+            time.sleep(REQUEST_DELAY_SECONDS)
+
+        day += timedelta(days=1)
+
+    print(f"daily_summaries 생성 요청 완료: {summary_total}건")

@@ -1,7 +1,7 @@
 import os
 import urllib.request
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
 from math import ceil
@@ -29,6 +29,7 @@ from app.models.mrv_report import MrvReport
 from app.models.validation_record import ValidationRecord
 from app.schemas.mrv_report import MrvReportCreate, MrvReportStatusUpdate
 from app.utils.response import success_response
+from app.models.sensor_log import SensorLog
 
 router = APIRouter(prefix="/mrv-reports", tags=["MRV Reports"])
 
@@ -126,7 +127,7 @@ def select_representative_validation_rows(rows: list[ValidationRecord]) -> list[
 
     valid_rows = sorted(valid_rows, key=lambda x: (x.record_date, x.id))
     n = len(valid_rows)
-    labels = ["월 초", "월 중", "월 후"]
+    labels = ["월 초", "월 중", "월 말"]
     raw_indices = [0, n // 2, n - 1]
 
     selected = []
@@ -482,25 +483,88 @@ def load_image_reader(url_or_path: str) -> ImageReader | None:
     return None
 
 
-def validation_status_text(row: ValidationRecord) -> str:
-    if row.is_match is True:
-        result = "일치"
-    elif row.is_match is False:
-        result = "불일치"
-    else:
-        result = "판별 불가"
+def validation_result_text(value):
+    if value is True:
+        return "일치"
+    if value is False:
+        return "불일치"
+    return "판별 불가"
 
-    if row.ai_sensor_match is True:
-        ai_result = "AI-센서 일치"
-    elif row.ai_sensor_match is False:
-        ai_result = "AI-센서 불일치"
-    else:
-        ai_result = "AI-센서 판별 불가"
 
-    sensor = row.sensor_predicted_status or "센서 상태 없음"
-    observed = row.observed_surface_status or "관찰 상태 없음"
+def get_sensor_ai_status_for_validation(row: ValidationRecord, db: Session):
+    """
+    검증 사진 촬영 시점 기준으로 센서 수위(cm)를 LOW/MID/HIGH 구간으로 변환한다.
+    1순위: captured_at 기준 근접 sensor_log
+    2순위: daily_summary.avg_inner_level
+    """
+    if row.node_id is None:
+        return None
+
+    sensor_level = None
+
+    if row.captured_at is not None:
+        target = row.captured_at.replace(tzinfo=None)
+        start_at = target - timedelta(hours=3)
+        end_at = target + timedelta(hours=3)
+
+        candidates = (
+            db.query(SensorLog)
+            .filter(
+                SensorLog.node_id == row.node_id,
+                SensorLog.measured_at >= start_at,
+                SensorLog.measured_at <= end_at,
+            )
+            .all()
+        )
+
+        if candidates:
+            nearest_log = min(
+                candidates,
+                key=lambda log: abs((log.measured_at.replace(tzinfo=None) - target).total_seconds()),
+            )
+            sensor_level = nearest_log.inner_water_level
+
+    if sensor_level is None:
+        summary = (
+            db.query(AwdDailySummary)
+            .filter(
+                AwdDailySummary.node_id == row.node_id,
+                AwdDailySummary.record_date == row.record_date,
+            )
+            .order_by(AwdDailySummary.id.desc())
+            .first()
+        )
+        sensor_level = summary.avg_inner_level if summary else None
+
+    if sensor_level is None:
+        return None
+
+    value = float(sensor_level)
+    if value < 2:
+        return "LOW"
+    if value < 4:
+        return "MID"
+    return "HIGH"
+
+
+def validation_status_text(row: ValidationRecord, db: Session) -> str:
+    sensor_observed_result = validation_result_text(row.is_match)
+    ai_sensor_result = validation_result_text(row.ai_sensor_match)
+
+    observed = row.observed_surface_status or "관찰값 없음"
+    sensor_surface = row.sensor_predicted_status or "센서 표면 판정 없음"
+    sensor_ai_status = get_sensor_ai_status_for_validation(row, db) or "센서 수위 구간 없음"
     ai = row.ai_predicted_status or "AI 분석 없음"
-    return f"촬영일: {row.record_date} / 센서 상태: {sensor} / 관찰 상태: {observed} / AI 상태: {ai} / 센서-관찰 검증: {result} / {ai_result}"
+
+    return (
+        f"촬영일: {row.record_date} / "
+        f"사람 관찰값: {observed} / "
+        f"센서 기반 표면 판정: {sensor_surface} / "
+        f"센서-관찰 검증: {sensor_observed_result} / "
+        f"센서 수위 구간: {sensor_ai_status} / "
+        f"AI 예측 구간: {ai} / "
+        f"AI-센서 구간 비교: {ai_sensor_result}"
+    )
 
 
 # ---------------------------
@@ -739,8 +803,8 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     y = draw_section_title(pdf, "1. 개요 (배경)", y, regular_font, bold_font)
     y = draw_text(
         pdf,
-        f"본 보고서는 {field.field_name} 논을 대상으로 {report_month_kor} 동안 수행된 AWD(Alternate Wetting and Drying) 물관리 이력을 분석한 MRV 보고서이다.\n"
-        "본 시스템은 IoT 센서를 활용하여 논의 수위 데이터를 자동으로 수집하고, 이를 기반으로 일 단위 상태를 분석하여 물관리 수행 여부를 기록하도록 설계되었다.",
+        f"이 보고서는 {field.field_name}을 대상으로 {report_month_kor} 동안 수행된 AWD(Alternate Wetting and Drying) 물관리 이력을 분석한 MRV 보고서이다.\n"
+        "이 시스템은 IoT 센서를 활용하여 논의 수위 데이터를 자동으로 수집하고, 이를 기반으로 일 단위 상태를 분석하여 물관리 수행 여부를 기록하도록 설계되었다.",
         LEFT_X, y, max_text_width, regular_font, BODY_SIZE, BODY_LINE_HEIGHT,
     )
     y -= PARAGRAPH_GAP
@@ -904,7 +968,7 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
             "검증 결과는 센서 기반 상태 판정의 신뢰성을 확인하기 위한 보조 자료로 활용된다. "
             "일부 불일치 사례는 촬영 시점과 센서 측정 시점 간 차이 또는 수위 경계 구간에서의 판단 차이에 의해 발생할 수 있다. "
             "AI-센서 일치율은 촬영 시점 기준 근접 센서 로그의 수위값을 LOW/MID/HIGH 기준으로 변환한 뒤 AI 예측 결과와 비교하여 산정하였다. "
-            "근접 센서 로그가 없는 경우 actual_water_level_cm 값을 보조 기준으로 사용하며, 비교 가능한 수위값이 없는 데이터는 정확도 산정에서 제외하였다.",
+            "근접 센서 로그가 없는 경우 일일 요약 평균 수위값(daily_summary.avg_inner_level)을 보조 기준으로 사용하며, 비교 가능한 수위값이 없는 데이터는 정확도 산정에서 제외하였다.",
             LEFT_X, y, max_text_width, regular_font,
         )
     else:
@@ -916,37 +980,70 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         )
 
     y -= 18
-    y = ensure_space_for_validation(pdf, y, 190, width, height, regular_font, page_no_ref)
+    y = ensure_space_for_validation(pdf, y, 300, width, height, regular_font, page_no_ref)
     y = draw_sub_title(pdf, "6.2 대표 검증 이미지 출력", y, bold_font)
 
     representative_rows = validation["representative_rows"]
     if representative_rows:
         y = draw_text(
             pdf,
-            "본 보고서에서는 분석 기간을 기준으로 월 초, 월 중, 월 후 시점을 대표하는 이미지를 제시한다.",
+            "본 보고서에서는 분석 기간을 기준으로 월 초, 월 중, 월 말 시점을 대표하는 이미지를 제시한다.",
             LEFT_X, y, max_text_width, regular_font,
         )
         y -= 10
-        for label, row in representative_rows:
-            y = ensure_space_for_validation(pdf, y, 250, width, height, regular_font, page_no_ref)
-            pdf.setFont(bold_font, SUB_TITLE_SIZE)
-            pdf.drawString(LEFT_X, y, f"[{label}] {row.image_title or '대표 검증 이미지'}")
-            y -= 18
+        card_width = 160
+        card_height = 245
+        gap = 12
+        start_x = LEFT_X
+        card_y = y
+
+        for idx, (label, row) in enumerate(representative_rows[:3]):
+            x = start_x + idx * (card_width + gap)
+
+            pdf.setStrokeColor(colors.lightgrey)
+            pdf.setLineWidth(0.5)
+            pdf.roundRect(x, card_y - card_height, card_width, card_height, 8, stroke=True, fill=False)
+
+            pdf.setFont(bold_font, 10)
+            pdf.drawString(x + 8, card_y - 18, f"{label} 대표 이미지")
 
             img = load_image_reader(row.image_url)
             if img:
-                image_width = 230
-                image_height = 130
-                pdf.drawImage(img, LEFT_X, y - image_height, width=image_width, height=image_height, preserveAspectRatio=True, mask='auto')
-                y -= image_height + 12
-            else:
-                y = draw_text(pdf, f"이미지 URL: {row.image_url}", LEFT_X, y, max_text_width, regular_font)
-                y -= 6
+                pdf.drawImage(
+                    img,
+                    x + 8,
+                    card_y - 120,
+                    width=card_width - 16,
+                    height=90,
+                    preserveAspectRatio=True,
+                    mask="auto"
+                )
 
-            y = draw_text(pdf, validation_status_text(row), LEFT_X, y, max_text_width, regular_font)
-            if row.note:
-                y = draw_text(pdf, f"비고: {row.note}", LEFT_X, y, max_text_width, regular_font)
-            y -= 12
+            sensor_ai_status = get_sensor_ai_status_for_validation(row, db) or "-"
+            ai_status = row.ai_predicted_status or "-"
+            observed = row.observed_surface_status or "-"
+            sensor_surface = row.sensor_predicted_status or "-"
+            match_text = validation_result_text(row.is_match)
+            ai_match_text = validation_result_text(row.ai_sensor_match)
+
+            info_lines = [
+                f"촬영일: {row.record_date}",
+                f"사람 관찰: {observed}",
+                f"센서 표면: {sensor_surface}",
+                f"센서 구간: {sensor_ai_status}",
+                f"AI 구간: {ai_status}",
+                f"검증: {match_text}",
+                f"AI-센서: {ai_match_text}",
+            ]
+
+            text_y = card_y - 138
+            pdf.setFont(regular_font, 8)
+            for line in info_lines:
+                pdf.drawString(x + 8, text_y, line)
+                text_y -= 12
+
+        y = card_y - card_height - 20
+    
     else:
         y = draw_text(
             pdf,
@@ -1299,15 +1396,30 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     # -----------------------------
     validation_sheet = workbook.create_sheet(title="검증 상세")
     validation_sheet.sheet_view.showGridLines = False
-    set_widths(validation_sheet, {"A": 14, "B": 18, "C": 20, "D": 20, "E": 14, "F": 20, "G": 18, "H": 45, "I": 30})
-    validation_sheet.merge_cells("A1:I1")
+    set_widths(validation_sheet, {
+        "A": 14, "B": 12, "C": 22, "D": 18, "E": 16,
+        "F": 16, "G": 16, "H": 18, "I": 45, "J": 30
+    })
+    validation_sheet.merge_cells("A1:J1")
     validation_sheet["A1"] = "검증 상세"
     validation_sheet["A1"].font = title_font
     validation_sheet["A1"].alignment = center
     validation_sheet.row_dimensions[1].height = 30
     validation_sheet.append([])
-    validation_sheet.append(["날짜", "노드 ID", "센서 상태", "관찰 상태", "센서-관찰", "AI 상태", "AI-센서", "이미지 URL", "비고"])
-    style_range(validation_sheet, "A3:I3", fill=header_fill, font=header_font, alignment=center)
+    validation_sheet.append([
+        "날짜",
+        "노드 ID",
+        "센서 기반 표면 판정",
+        "사람 관찰값",
+        "센서-관찰 검증",
+        "센서 수위 구간",
+        "AI 예측 구간",
+        "AI-센서 구간 비교",
+        "이미지 URL",
+        "비고"
+    ])
+    
+    style_range(validation_sheet, "A3:J3", fill=header_fill, font=header_font, alignment=center)
 
     if validation_rows:
         for row_data in validation_rows:
@@ -1331,18 +1443,19 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
                 row_data.sensor_predicted_status,
                 row_data.observed_surface_status,
                 match_text,
+                get_sensor_ai_status_for_validation(row_data, db),
                 row_data.ai_predicted_status,
                 ai_sensor_text,
                 row_data.image_url,
                 row_data.note,
             ])
     else:
-        validation_sheet.append(["검증 데이터 없음", "", "", "", "", "", "", "", ""])
+        validation_sheet.append(["검증 데이터 없음", "", "", "", "", "", "", "", "", ""])
 
-    for row_cells in validation_sheet.iter_rows(min_row=4, max_row=validation_sheet.max_row, min_col=1, max_col=9):
+    for row_cells in validation_sheet.iter_rows(min_row=4, max_row=validation_sheet.max_row, min_col=1, max_col=10):
         for cell in row_cells:
             cell.font = body_font
-            cell.alignment = left if cell.column in (8, 9) else center
+            cell.alignment = left if cell.column in (9, 10) else center
             cell.border = border
 
     for sheet in workbook.worksheets:

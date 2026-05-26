@@ -165,25 +165,18 @@ def calculate_match(sensor_status: str | None, observed_status: str | None):
     return expected == observed_status
 
 
-def calculate_ai_sensor_match(
-    sensor_status: str | None,
-    ai_status: str | None,
-    sensor_observed_match: bool | None,
-):
-    # 센서-사람 검증이 True인 데이터만 AI-센서 비교 대상으로 사용한다.
-    if sensor_observed_match is not True:
+def calculate_ai_sensor_match(sensor_level, ai_status: str | None):
+    """
+    센서 수위(cm)를 LOW/MID/HIGH 구간으로 변환한 뒤
+    AI 예측 결과(LOW/MID/HIGH)와 비교한다.
+    """
+    sensor_ai_status = water_level_cm_to_ai_status(sensor_level)
+
+    if sensor_ai_status is None or ai_status is None or ai_status == "UNKNOWN":
         return None
 
-    sensor_surface_status = daily_status_to_surface_status(sensor_status)
-    if (
-        not sensor_surface_status
-        or not ai_status
-        or sensor_surface_status == "UNKNOWN"
-        or ai_status == "UNKNOWN"
-    ):
-        return None
+    return sensor_ai_status == ai_status
 
-    return sensor_surface_status == ai_status
 
 def water_level_cm_to_ai_status(value):
     if value is None:
@@ -422,10 +415,30 @@ def update_validation(
         record.sensor_predicted_status,
         record.observed_surface_status,
     )
+    
+    nearest_log = get_nearest_sensor_log(
+        db=db,
+        node_id=record.node_id,
+        captured_at=record.captured_at,
+    )
+
+    if nearest_log:
+        sensor_level = nearest_log.inner_water_level
+    else:
+        summary = (
+            db.query(AwdDailySummary)
+            .filter(
+                AwdDailySummary.node_id == record.node_id,
+                AwdDailySummary.record_date == record.record_date,
+            )
+            .order_by(AwdDailySummary.id.desc())
+            .first()
+        )
+        sensor_level = summary.avg_inner_level if summary else None
+
     record.ai_sensor_match = calculate_ai_sensor_match(
-        record.sensor_predicted_status,
+        sensor_level,
         record.ai_predicted_status,
-        record.is_match,
     )
 
     db.commit()
@@ -513,13 +526,7 @@ def analyze_validation_image(
 
             sensor_level = summary.avg_inner_level if summary else None
 
-        sensor_ai_status = water_level_cm_to_ai_status(sensor_level)
-
-        record.ai_sensor_match = (
-            sensor_ai_status == ai_status
-            if sensor_ai_status is not None
-            else None
-        )
+        record.ai_sensor_match = calculate_ai_sensor_match(sensor_level, ai_status)
 
         db.commit()
         db.refresh(record)
