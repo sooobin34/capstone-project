@@ -200,6 +200,7 @@ export default function ValidationPage() {
     fontSize: '13px', padding: '7px 12px', borderRadius: '8px',
     border: '0.5px solid #ccc', background: 'white', width: '100%',
     boxSizing: 'border-box' as const,
+    color: '#333', // iOS Safari date/time input 텍스트 표시 버그 수정
   }
 
   const requiredInputStyle = {
@@ -243,14 +244,14 @@ export default function ValidationPage() {
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>
             <div style={{ display: 'flex', gap: '8px', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0', flexWrap: 'wrap' }}>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }}>
+                style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', color: '#333' }}>
                 <option value="">전체 상태</option>
                 {SURFACE_STATUS_OPTIONS_AUTO.map(s => (
                   <option key={s.label} value={s.label}>{s.label}</option>
                 ))}
               </select>
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
-  style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', minWidth: '130px' }} />
+                style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', minWidth: '130px', color: '#333' }} />
               {(filterStatus || filterDate) && (
                 <button onClick={() => { setFilterStatus(''); setFilterDate('') }}
                   style={{ fontSize: '13px', padding: '5px 10px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', color: '#888' }}>
