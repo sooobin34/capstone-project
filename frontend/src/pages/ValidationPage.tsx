@@ -77,6 +77,20 @@ export default function ValidationPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterDate, setFilterDate] = useState('')
 
+  const [filterFieldId, setFilterFieldId] = useState<number | ''>('')
+  const [filterNodeId, setFilterNodeId] = useState<number | ''>('')
+  const [filterNodes, setFilterNodes] = useState<any[]>([])
+
+  useEffect(() => {
+    if (filterFieldId) {
+      getNodes(Number(filterFieldId)).then(setFilterNodes).catch(console.error)
+      setFilterNodeId('')
+    } else {
+      getNodes().then(setFilterNodes).catch(console.error)
+      setFilterNodeId('')
+    }
+  }, [filterFieldId])
+  
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
     fetchLatestLog()
@@ -120,6 +134,8 @@ export default function ValidationPage() {
   }
 
   const filteredRecords = records
+    .filter(r => filterFieldId ? r.field_id === Number(filterFieldId) : true)
+    .filter(r => filterNodeId ? r.node_id === Number(filterNodeId) : true)
     .filter(r => filterStatus ? toAutoStatusLabel(r.ai_predicted_status) === filterStatus : true)
     .filter(r => filterDate ? r.record_date === filterDate : true)
 
@@ -243,6 +259,28 @@ export default function ValidationPage() {
           {/* 검증 사진 목록 */}
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>
             <div style={{ display: 'flex', gap: '8px', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0', flexWrap: 'wrap' }}>
+              <select
+                value={filterFieldId}
+                onChange={(e) => setFilterFieldId(e.target.value ? Number(e.target.value) : '')}
+                style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', color: '#333' }}
+              >
+                <option value="">전체 논</option>
+                {fields.map(f => (
+                  <option key={f.id} value={f.id}>{f.field_name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterNodeId}
+                onChange={(e) => setFilterNodeId(e.target.value ? Number(e.target.value) : '')}
+                style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', color: '#333' }}
+              >
+                <option value="">전체 노드</option>
+                {filterNodes.map(n => (
+                  <option key={n.id} value={n.id}>Node {n.id}</option>
+                ))}
+              </select>
+              
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
                 style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', color: '#333' }}>
                 <option value="">전체 상태</option>
@@ -252,8 +290,13 @@ export default function ValidationPage() {
               </select>
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
                 style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', minWidth: '130px', color: '#333' }} />
-              {(filterStatus || filterDate) && (
-                <button onClick={() => { setFilterStatus(''); setFilterDate('') }}
+              {(filterFieldId || filterNodeId || filterStatus || filterDate) && (
+                <button onClick={() => {
+                          setFilterFieldId('')
+                          setFilterNodeId('')
+                          setFilterStatus('')
+                          setFilterDate('')
+                        }}
                   style={{ fontSize: '13px', padding: '5px 10px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', color: '#888' }}>
                   초기화
                 </button>
@@ -271,14 +314,25 @@ export default function ValidationPage() {
                   padding: '14px 0', borderBottom: i < filteredRecords.length - 1 ? '0.5px solid #f0f0f0' : 'none',
                 }}>
                   {record.image_url && (
-                    <img src={record.image_url} alt="검증사진" onClick={() => setModalImage(record.image_url)}
-                      style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0, cursor: 'pointer' }} />
+                    <img
+                      src={record.image_url}
+                      alt="검증사진"
+                      onClick={() => setModalImage(record.image_url)}
+                      style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0, cursor: 'pointer' }}
+                    />
                   )}
+
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', gap: '8px', flexWrap: 'wrap' }}>
-                      <p style={{ fontSize: '15px', fontWeight: 500, wordBreak: 'break-word', margin: 0 }}>
-                        {record.image_title || '제목 없음'} · {record.record_date}
-                      </p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '15px', fontWeight: 500, wordBreak: 'break-word', margin: 0 }}>
+                          {record.image_title || '제목 없음'} · {record.record_date}
+                        </p>
+                        <p style={{ fontSize: '12px', color: '#666', margin: '2px 0' }}>
+                          논: {fields.find(f => f.id === record.field_id)?.field_name ?? `Field ${record.field_id}`} · Node {record.node_id ?? '-'}
+                        </p>
+                      </div>
+
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                         {record.ai_sensor_match !== null && record.ai_sensor_match !== undefined && (
                           <span style={{
@@ -292,24 +346,38 @@ export default function ValidationPage() {
                             {record.ai_sensor_match ? 'AI-센서 일치' : 'AI-센서 불일치'}
                           </span>
                         )}
-                        
-                        <button onClick={() => handleAnalyze(record.id)} disabled={analyzingId === record.id}
+
+                        <button
+                          onClick={() => handleAnalyze(record.id)}
+                          disabled={analyzingId === record.id}
                           style={{
-                            fontSize: '12px', padding: '4px 10px', borderRadius: '8px',
-                            border: '0.5px solid #1D9E75', background: 'white', cursor: 'pointer', color: '#1D9E75',
-                            opacity: analyzingId === record.id ? 0.6 : 1, whiteSpace: 'nowrap',
-                          }}>
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            border: '0.5px solid #1D9E75',
+                            background: 'white',
+                            cursor: 'pointer',
+                            color: '#1D9E75',
+                            opacity: analyzingId === record.id ? 0.6 : 1,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {analyzingId === record.id ? 'AI 분석 중...' : 'AI 분석'}
                         </button>
                       </div>
                     </div>
+
                     <p style={{ fontSize: '13px', color: '#888', marginBottom: '2px' }}>
                       사람: {SURFACE_STATUS_OPTIONS.find(s => s.value === record.observed_surface_status)?.label ?? record.observed_surface_status}
                       {record.ai_predicted_status && ` · AI: ${toAutoStatusLabel(record.ai_predicted_status)}`}
                       {record.ai_confidence != null && ` · 신뢰도 ${record.ai_confidence}%`}
                     </p>
+
                     {record.note && <p style={{ fontSize: '13px', color: '#aaa' }}>{record.note}</p>}
-                    <p style={{ fontSize: '12px', color: '#bbb', marginTop: '2px' }}>{new Date(record.created_at).toLocaleString('ko-KR')}</p>
+
+                    <p style={{ fontSize: '12px', color: '#bbb', marginTop: '2px' }}>
+                      {new Date(record.created_at).toLocaleString('ko-KR')}
+                    </p>
                   </div>
                 </div>
               ))
