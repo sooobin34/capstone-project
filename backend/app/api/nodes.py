@@ -8,6 +8,8 @@ from app.schemas.iot_node import IotNodeCreate
 from app.utils.response import success_response
 from app.models.alert import Alert
 from app.models.sensor_log import SensorLog
+from app.models.awd_daily_summary import AwdDailySummary
+from app.models.validation_record import ValidationRecord
 
 router = APIRouter(prefix="/nodes", tags=["Nodes"])
 
@@ -113,3 +115,20 @@ def get_node_status(node_id: int, db: Session = Depends(get_db)):
     }
 
     return success_response(data, "기기 상태 조회 성공")
+
+
+@router.delete("/{node_id}")
+def delete_node(node_id: int, db: Session = Depends(get_db)):
+    node = db.query(IotNode).filter(IotNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
+
+    db.query(Alert).filter(Alert.node_id == node_id).delete(synchronize_session=False)
+    db.query(AwdDailySummary).filter(AwdDailySummary.node_id == node_id).delete(synchronize_session=False)
+    db.query(SensorLog).filter(SensorLog.node_id == node_id).delete(synchronize_session=False)
+    db.query(ValidationRecord).filter(ValidationRecord.node_id == node_id).delete(synchronize_session=False)
+
+    db.delete(node)
+    db.commit()
+
+    return success_response(None, "노드 및 관련 데이터 삭제 성공")
