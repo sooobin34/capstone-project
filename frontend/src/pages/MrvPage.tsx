@@ -216,9 +216,9 @@ export default function MrvPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 {[
                   { label: '전체 검증', value: `${validationSummary.total_validation_count ?? 0}건` },
-                  { label: '일치', value: `${validationSummary.match_count ?? 0}건` },
-                  { label: '불일치', value: `${(validationSummary.total_validation_count ?? 0) - (validationSummary.match_count ?? 0)}건` },
-                  { label: 'AI 일치율', value: validationSummary.validation_accuracy != null ? `${validationSummary.validation_accuracy}%` : '-' },
+                  { label: 'AI-센서 일치', value: `${validationSummary.ai_sensor_match_count ?? 0}건` },
+                  { label: 'AI-센서 불일치', value: `${validationSummary.ai_sensor_mismatch_count ?? 0}건` },
+                  { label: 'AI-센서 일치율', value: validationSummary.ai_sensor_accuracy != null ? `${validationSummary.ai_sensor_accuracy}%` : '-' },
                 ].map((item) => (
                   <div key={item.label} style={{ background: '#f5f5f5', borderRadius: '8px', padding: '10px 12px' }}>
                     <p style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>{item.label}</p>
