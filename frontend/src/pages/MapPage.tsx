@@ -92,21 +92,18 @@ export default function MapPage() {
     <div style={{ position: 'fixed', top: '48px', left: 0, right: 0, bottom: 0 }}>
       {/* 지도 */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
-        {selectedField ? (
-          <FieldMap
-            sensors={mapSensors}
-            center={[selectedField.latitude, selectedField.longitude]}
-            onNodeClick={(node) => {
-              setSelectedNode(node)
-              if (isMobile) setIsPanelOpen(false)
-            }}
-            selectedNodeId={selectedNode?.id ?? null}
-          />
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa', fontSize: '14px' }}>
-            논을 선택해주세요
-          </div>
-        )}
+        <FieldMap
+  sensors={mapSensors}
+  center={selectedField
+    ? [selectedField.latitude, selectedField.longitude]
+    : [35.8468, 127.1294]
+  }
+  onNodeClick={(node) => {
+    setSelectedNode(node)
+    if (isMobile) setIsPanelOpen(false)
+  }}
+  selectedNodeId={selectedNode?.id ?? null}
+/>
       </div>
 
       {/* 왼쪽 패널 */}
