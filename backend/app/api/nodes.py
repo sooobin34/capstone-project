@@ -132,3 +132,19 @@ def delete_node(node_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return success_response(None, "노드 및 관련 데이터 삭제 성공")
+
+
+@router.delete("/{node_id}/data")
+def delete_node_data(node_id: int, db: Session = Depends(get_db)):
+    node = db.query(IotNode).filter(IotNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
+
+    db.query(Alert).filter(Alert.node_id == node_id).delete(synchronize_session=False)
+    db.query(AwdDailySummary).filter(AwdDailySummary.node_id == node_id).delete(synchronize_session=False)
+    db.query(SensorLog).filter(SensorLog.node_id == node_id).delete(synchronize_session=False)
+    db.query(ValidationRecord).filter(ValidationRecord.node_id == node_id).delete(synchronize_session=False)
+
+    db.commit()
+
+    return success_response(None, "노드 데이터 삭제 성공")
