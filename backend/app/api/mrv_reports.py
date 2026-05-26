@@ -1024,21 +1024,35 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
             match_text = validation_result_text(row.is_match)
             ai_match_text = validation_result_text(row.ai_sensor_match)
 
-            info_lines = [
-                f"촬영일: {row.record_date}",
-                f"사람 관찰: {observed}",
-                f"센서 표면: {sensor_surface}",
-                f"센서 구간: {sensor_ai_status}",
-                f"AI 구간: {ai_status}",
-                f"검증: {match_text}",
-                f"AI-센서: {ai_match_text}",
+            info_groups = [
+                [f"촬영일: {row.record_date}"],
+                [
+                    f"사람 관찰: {observed}",
+                    f"센서 표면: {sensor_surface}",
+                ],
+                [
+                    f"센서 구간: {sensor_ai_status}",
+                    f"AI 구간: {ai_status}",
+                ],
+                [
+                    f"센서-사람: {match_text}",
+                    f"AI-센서: {ai_match_text}",
+                ],
             ]
 
             text_y = card_y - 138
             pdf.setFont(regular_font, 8)
-            for line in info_lines:
-                pdf.drawString(x + 8, text_y, line)
-                text_y -= 12
+
+            for group_idx, group in enumerate(info_groups):
+                for line in group:
+                    pdf.drawString(x + 8, text_y, line)
+                    text_y -= 11
+
+                if group_idx < len(info_groups) - 1:
+                    pdf.setStrokeColor(colors.lightgrey)
+                    pdf.setLineWidth(0.3)
+                    pdf.line(x + 8, text_y + 3, x + card_width - 8, text_y + 3)
+                    text_y -= 6
 
         y = card_y - card_height - 20
     
