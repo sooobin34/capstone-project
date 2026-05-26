@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.api.deps import get_db
 from app.models.field import Field
@@ -148,3 +149,49 @@ def delete_node_data(node_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return success_response(None, "노드 데이터 삭제 성공")
+
+
+class IotNodeUpdate(BaseModel):
+    field_id: int | None = None
+    mac_address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    location_desc: str | None = None
+    is_active: bool | None = None
+
+
+@router.patch("/{node_id}")
+def update_node(node_id: int, payload: IotNodeUpdate, db: Session = Depends(get_db)):
+    node = db.query(IotNode).filter(IotNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="해당 node_id가 존재하지 않습니다.")
+
+    if payload.field_id is not None:
+        field = db.query(Field).filter(Field.id == payload.field_id).first()
+        if not field:
+            raise HTTPException(status_code=404, detail="해당 field_id가 존재하지 않습니다.")
+        node.field_id = payload.field_id
+
+    if payload.mac_address is not None:
+        existing_node = (
+            db.query(IotNode)
+            .filter(IotNode.mac_address == payload.mac_address, IotNode.id != node_id)
+            .first()
+        )
+        if existing_node:
+            raise HTTPException(status_code=400, detail="이미 등록된 mac_address입니다.")
+        node.mac_address = payload.mac_address
+
+    if payload.latitude is not None:
+        node.latitude = payload.latitude
+    if payload.longitude is not None:
+        node.longitude = payload.longitude
+    if payload.location_desc is not None:
+        node.location_desc = payload.location_desc
+    if payload.is_active is not None:
+        node.is_active = payload.is_active
+
+    db.commit()
+    db.refresh(node)
+
+    return success_response(node, "노드 정보 수정 성공")

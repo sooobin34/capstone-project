@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.api.deps import get_db
 from app.models.field import Field
@@ -67,3 +68,42 @@ def delete_field(field_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return success_response(None, "논 및 관련 데이터 삭제 성공")
+
+
+from pydantic import BaseModel
+
+
+class FieldUpdate(BaseModel):
+    field_name: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    location_desc: str | None = None
+
+
+@router.patch("/{field_id}")
+def update_field(field_id: int, payload: FieldUpdate, db: Session = Depends(get_db)):
+    field = db.query(Field).filter(Field.id == field_id).first()
+    if not field:
+        raise HTTPException(status_code=404, detail="해당 field_id가 존재하지 않습니다.")
+
+    if payload.field_name is not None:
+        existing_field = (
+            db.query(Field)
+            .filter(Field.field_name == payload.field_name, Field.id != field_id)
+            .first()
+        )
+        if existing_field:
+            raise HTTPException(status_code=400, detail="이미 등록된 논 이름입니다.")
+        field.field_name = payload.field_name
+
+    if payload.latitude is not None:
+        field.latitude = payload.latitude
+    if payload.longitude is not None:
+        field.longitude = payload.longitude
+    if payload.location_desc is not None:
+        field.location_desc = payload.location_desc
+
+    db.commit()
+    db.refresh(field)
+
+    return success_response(field, "논 정보 수정 성공")
