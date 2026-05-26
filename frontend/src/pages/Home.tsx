@@ -234,7 +234,12 @@ export default function Home() {
           <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden' }}>
             {fields.length > 0 ? (
               <FieldMap
-                sensors={[]}
+                sensors={nodes.map(n => ({
+                  id: n.id,
+                  lat: n.latitude,
+                  lng: n.longitude,
+                  name: `Node ${n.id}`,
+  }))}
                 center={[
                   fields.find(f => f.id === Number(selectedFieldId))?.latitude ?? fields[0].latitude,
                   fields.find(f => f.id === Number(selectedFieldId))?.longitude ?? fields[0].longitude,
@@ -360,13 +365,18 @@ export default function Home() {
         </div>
         <div style={{ flex: 1, borderRadius: '8px', overflow: 'hidden', minHeight: 0 }}>
           {fields.length > 0 ? (
-            <FieldMap
-              sensors={[]}
-              center={[
-                fields.find(f => f.id === Number(selectedFieldId))?.latitude ?? fields[0].latitude,
-                fields.find(f => f.id === Number(selectedFieldId))?.longitude ?? fields[0].longitude,
-              ]}
-            />
+           <FieldMap
+  sensors={nodes.map(n => ({
+    id: n.id,
+    lat: n.latitude,
+    lng: n.longitude,
+    name: `Node ${n.id}`,
+  }))}
+  center={[
+    fields.find(f => f.id === Number(selectedFieldId))?.latitude ?? fields[0].latitude,
+    fields.find(f => f.id === Number(selectedFieldId))?.longitude ?? fields[0].longitude,
+  ]}
+/>
           ) : (
             <div style={{ height: '100%', background: '#f5f5f5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '11px', color: '#888' }}>논 {dashboard?.total_fields ?? 0}개 등록됨</span>
