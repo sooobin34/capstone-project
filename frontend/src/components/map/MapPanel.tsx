@@ -7,7 +7,7 @@ import api from '../../api/axios'
 interface MapPanelProps {
   fields: Field[]
   selectedFieldId: number | null
-  onFieldSelect: (fieldId: number) => void
+  onFieldSelect: (fieldId: number | null) => void
   onFieldsRefresh: () => void
   sensors: {
     id: number
@@ -190,7 +190,15 @@ export default function MapPanel({
 
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px', fontWeight: 500 }}>논 선택</p>
         <select value={selectedFieldId ?? ''}
-  onChange={e => onFieldSelect(Number(e.target.value))}
+  <select
+    value={selectedFieldId ?? ''}
+    onChange={e => onFieldSelect(e.target.value ? Number(e.target.value) : null)}
+    style={inputStyle}
+  >
+    <option value="">전체 논</option>
+    {filteredFields.map(f => <option key={f.id} value={f.id}>{f.field_name}</option>)}
+  </select>
+        
   style={inputStyle}>
   <option value="">논 선택</option>
   {filteredFields.map(f => <option key={f.id} value={f.id}>{f.field_name}</option>)}
