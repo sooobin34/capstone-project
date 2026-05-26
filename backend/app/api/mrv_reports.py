@@ -762,8 +762,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.setFont(bold_font, TOC_TITLE_SIZE)
     pdf.drawCentredString(width / 2, height - 55, "목차")
 
-    section_7_page = "8" if len(validation["representative_rows"]) >= 2 else "7"
-
     toc_items = [
         ("1. 개요 (배경)", "3", 0),
         ("2. 분석 대상 및 기간", "3", 0),
@@ -775,8 +773,8 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         ("6. 검증 결과", "6", 0),
         ("6.1 현장 검증 결과", "6", 1),
         ("6.2 대표 검증 이미지 출력", "6", 1),
-        ("7. 향후 계획", section_7_page, 0),
-        ("8. 결론", section_7_page, 0),
+        ("7. 향후 계획", "7", 0),
+        ("8. 결론", "7", 0),
     ]
 
     y = height - 125
