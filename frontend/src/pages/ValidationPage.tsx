@@ -8,30 +8,23 @@ const SURFACE_STATUS_OPTIONS = [
 ]
 
 const SURFACE_STATUS_OPTIONS_AUTO = [
-  { label: '물 있음', value: 'WATER_VISIBLE' },
-  { label: '물 없음', value: 'NO_WATER_VISIBLE' },
-  { label: '애매함', value: 'UNKNOWN' },
+  { label: 'low', value: 'WATER_VISIBLE' },
+  { label: 'mid', value: 'NO_WATER_VISIBLE' },
+  { label: 'high', value: 'UNKNOWN' },
 ]
 
-const STATUS_ALIAS_MAP: Record<string, 'WATER_VISIBLE' | 'NO_WATER_VISIBLE' | 'UNKNOWN'> = {
-  WATER_VISIBLE: 'WATER_VISIBLE',
-  NO_WATER_VISIBLE: 'NO_WATER_VISIBLE',
-  UNKNOWN: 'UNKNOWN',
-  LOW: 'WATER_VISIBLE',
-  MID: 'UNKNOWN',
-  HIGH: 'NO_WATER_VISIBLE',
+const STATUS_ALIAS_MAP: Record<string, string> = {
+  WATER_VISIBLE: 'low',
+  NO_WATER_VISIBLE: 'mid',
+  UNKNOWN: 'high',
+  LOW: 'low',
+  MID: 'mid',
+  HIGH: 'high',
 }
 
-function normalizeStatusValue(raw?: string): 'WATER_VISIBLE' | 'NO_WATER_VISIBLE' | 'UNKNOWN' {
+function toAutoStatusLabel(raw?: string): string {
   const key = (raw ?? '').toUpperCase()
-  return STATUS_ALIAS_MAP[key] ?? 'UNKNOWN'
-}
-
-function toKoreanStatusLabel(raw?: string): string {
-  const normalized = normalizeStatusValue(raw)
-  if (normalized === 'WATER_VISIBLE') return '물 있음'
-  if (normalized === 'NO_WATER_VISIBLE') return '물 없음'
-  return '애매함'
+  return STATUS_ALIAS_MAP[key] ?? raw ?? '-'
 }
 
 const ANGLE_OPTIONS = ['수직', '좌', '우', '기타']
@@ -66,13 +59,11 @@ export default function ValidationPage() {
   const [latestLog, setLatestLog] = useState<any>(null)
   const [logLoading, setLogLoading] = useState(false)
 
-  // 필드/노드 목록
   const [fields, setFields] = useState<any[]>([])
   const [nodes, setNodes] = useState<any[]>([])
   const [fieldId, setFieldId] = useState<number | ''>('')
   const [nodeId, setNodeId] = useState<number | ''>('')
 
-  // 업로드 폼
   const [observedStatus, setObservedStatus] = useState('WATER_VISIBLE')
   const [angle, setAngle] = useState('')
   const [distance, setDistance] = useState('')
@@ -135,8 +126,9 @@ export default function ValidationPage() {
     } catch { }
   }
 
+  // AI 결과 기준으로 필터링
   const filteredRecords = records
-    .filter(r => filterStatus ? normalizeStatusValue(r.observed_surface_status) === filterStatus : true)
+    .filter(r => filterStatus ? toAutoStatusLabel(r.ai_predicted_status) === filterStatus : true)
     .filter(r => filterDate ? r.record_date === filterDate : true)
 
   const handleConditionToggle = (c: string) => {
@@ -241,16 +233,13 @@ export default function ValidationPage() {
           { key: 'field', label: '현장 테스트' },
           { key: 'auto', label: '자동 분석' },
         ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key as 'field' | 'auto')}
+          <button key={t.key} onClick={() => setTab(t.key as 'field' | 'auto')}
             style={{
               fontSize: '13px', padding: '7px 18px', borderRadius: '8px',
               border: 'none', cursor: 'pointer', fontWeight: 500,
               background: tab === t.key ? '#1D9E75' : '#f0f0f0',
               color: tab === t.key ? 'white' : '#888',
-            }}
-          >
+            }}>
             {t.label}
           </button>
         ))}
@@ -278,10 +267,13 @@ export default function ValidationPage() {
           {/* 검증 사진 목록 */}
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>
             <div style={{ display: 'flex', gap: '8px', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0', flexWrap: 'wrap' }}>
+              {/* AI 결과 기준 드롭다운 */}
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
                 style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }}>
                 <option value="">전체 상태</option>
-                {SURFACE_STATUS_OPTIONS_AUTO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {SURFACE_STATUS_OPTIONS_AUTO.map(s => (
+                  <option key={s.label} value={s.label}>{s.label}</option>
+                ))}
               </select>
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
                 style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white' }} />
@@ -331,8 +323,8 @@ export default function ValidationPage() {
                       </div>
                     </div>
                     <p style={{ fontSize: '11px', color: '#888', marginBottom: '2px' }}>
-                      사람: {toKoreanStatusLabel(record.observed_surface_status)}
-                      {record.ai_predicted_status && ` · AI: ${toKoreanStatusLabel(record.ai_predicted_status)}`}
+                      사람: {SURFACE_STATUS_OPTIONS.find(s => s.value === record.observed_surface_status)?.label ?? record.observed_surface_status}
+                      {record.ai_predicted_status && ` · AI: ${toAutoStatusLabel(record.ai_predicted_status)}`}
                       {record.ai_confidence != null && ` · 신뢰도 ${record.ai_confidence}%`}
                     </p>
                     {record.note && <p style={{ fontSize: '11px', color: '#aaa' }}>{record.note}</p>}
@@ -376,7 +368,6 @@ export default function ValidationPage() {
             <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>사진 업로드</p>
             <p style={{ fontSize: '11px', color: '#1D9E75', marginBottom: '12px' }}>* 표시는 필수 항목입니다</p>
 
-            {/* 논 선택 (필수) */}
             <div style={{ marginBottom: '10px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>논 선택 *</p>
               <select value={fieldId} onChange={(e) => { setFieldId(e.target.value ? Number(e.target.value) : ''); setNodeId('') }}
@@ -386,7 +377,6 @@ export default function ValidationPage() {
               </select>
             </div>
 
-            {/* 노드 선택 (필수) */}
             <div style={{ marginBottom: '10px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>센서 노드 *</p>
               <select value={nodeId} onChange={(e) => setNodeId(e.target.value ? Number(e.target.value) : '')}
@@ -397,21 +387,17 @@ export default function ValidationPage() {
               </select>
             </div>
 
-            {/* 촬영 날짜/시각 (필수) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               <div>
                 <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>촬영 날짜 *</p>
-                <input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
-                  style={requiredInputStyle} />
+                <input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)} style={requiredInputStyle} />
               </div>
               <div>
                 <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>촬영 시각 *</p>
-                <input type="time" value={captureTime} onChange={(e) => setCaptureTime(e.target.value)}
-                  style={requiredInputStyle} />
+                <input type="time" value={captureTime} onChange={(e) => setCaptureTime(e.target.value)} style={requiredInputStyle} />
               </div>
             </div>
 
-            {/* 관찰 상태 (필수) */}
             <div style={{ marginBottom: '10px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>관찰 상태 *</p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -423,7 +409,6 @@ export default function ValidationPage() {
               </div>
             </div>
 
-            {/* 촬영 각도 (선택) */}
             <div style={{ marginBottom: '10px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>촬영 각도</p>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -433,7 +418,6 @@ export default function ValidationPage() {
               </div>
             </div>
 
-            {/* 촬영 높이 (선택) */}
             <div style={{ marginBottom: '10px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>촬영 높이</p>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -443,7 +427,6 @@ export default function ValidationPage() {
               </div>
             </div>
 
-            {/* 빛/방해요소 (선택) */}
             <div style={{ marginBottom: '10px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>빛/방해요소</p>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -453,13 +436,11 @@ export default function ValidationPage() {
               </div>
             </div>
 
-            {/* 메모 (선택) */}
             <div style={{ marginBottom: '12px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>메모</p>
               <input type="text" value={extraNote} onChange={(e) => setExtraNote(e.target.value)} placeholder="추가 메모" style={inputStyle} />
             </div>
 
-            {/* 사진 선택 (필수) */}
             <div style={{ marginBottom: '12px' }}>
               <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>사진 선택 *</p>
               <input type="file" accept="image/*" capture="environment" onChange={handleFileChange}
