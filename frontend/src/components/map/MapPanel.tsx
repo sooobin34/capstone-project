@@ -189,20 +189,18 @@ export default function MapPanel({
         </select>
 
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px', fontWeight: 500 }}>논 선택</p>
-        <select value={selectedFieldId ?? ''}
-  <select
-    value={selectedFieldId ?? ''}
-    onChange={e => onFieldSelect(e.target.value ? Number(e.target.value) : null)}
-    style={inputStyle}
-  >
-    <option value="">전체 논</option>
-    {filteredFields.map(f => <option key={f.id} value={f.id}>{f.field_name}</option>)}
-  </select>
-        
-  style={inputStyle}>
-  <option value="">논 선택</option>
-  {filteredFields.map(f => <option key={f.id} value={f.id}>{f.field_name}</option>)}
-</select>
+        <select
+          value={selectedFieldId ?? ''}
+          onChange={e => onFieldSelect(e.target.value ? Number(e.target.value) : null)}
+          style={inputStyle}
+        >
+          <option value="">전체 논</option>
+          {filteredFields.map(f => (
+            <option key={f.id} value={f.id}>
+              {f.field_name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div style={{ borderTop: '0.5px solid #f0f0f0', marginBottom: '16px' }} />
