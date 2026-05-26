@@ -6,6 +6,8 @@ import torch.nn as nn
 from PIL import Image
 from torchvision import transforms, models
 
+# Render 메모리/CPU 부담 완화
+torch.set_num_threads(1)
 
 # =========================
 # 경로 설정
@@ -25,7 +27,6 @@ LOW_MID_MODEL_PATH = os.path.join(
     "water_classifier_low_mid_best.pth"
 )
 
-
 # =========================
 # 클래스 설정
 # =========================
@@ -35,7 +36,6 @@ BOUNDARY_CLASS_NAMES = ["low", "mid"]
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 # =========================
 # 이미지 전처리
 # =========================
@@ -44,7 +44,6 @@ transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
 ])
-
 
 # =========================
 # 모델 로드
@@ -63,22 +62,33 @@ def load_resnet18(num_classes: int, model_path: str):
         checkpoint = checkpoint["model_state_dict"]
 
     model.load_state_dict(checkpoint)
-
     model = model.to(DEVICE)
     model.eval()
 
     return model
 
 
-main_model = load_resnet18(
-    num_classes=3,
-    model_path=MAIN_MODEL_PATH
-)
+# import 순간 로드하지 않도록 None으로 시작
+main_model = None
+low_mid_model = None
 
-low_mid_model = load_resnet18(
-    num_classes=2,
-    model_path=LOW_MID_MODEL_PATH
-)
+
+def get_models():
+    global main_model, low_mid_model
+
+    if main_model is None:
+        main_model = load_resnet18(
+            num_classes=3,
+            model_path=MAIN_MODEL_PATH
+        )
+
+    if low_mid_model is None:
+        low_mid_model = load_resnet18(
+            num_classes=2,
+            model_path=LOW_MID_MODEL_PATH
+        )
+
+    return main_model, low_mid_model
 
 
 # =========================
@@ -97,11 +107,16 @@ def predict_water_level(image_path: str) -> Dict[str, Any]:
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"이미지 파일을 찾을 수 없습니다: {image_path}")
 
-    image = Image.open(image_path).convert("RGB")
+    # AI 분석 요청이 들어왔을 때 처음 1번만 모델 로드
+    main_model, low_mid_model = get_models()
+
+    # 이미지 파일 안전하게 열고 닫기
+    with Image.open(image_path) as img:
+        image = img.convert("RGB")
+
     image_tensor = transform(image).unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():
-        # 1차 모델 예측
         main_outputs = main_model(image_tensor)
         main_probs = torch.softmax(main_outputs, dim=1)
 
@@ -115,7 +130,6 @@ def predict_water_level(image_path: str) -> Dict[str, Any]:
 
         boundary_result = None
 
-        # 1차 모델이 MID라고 판단한 경우 LOW-MID 경계 모델로 재검사
         if main_pred_name == "mid":
             boundary_outputs = low_mid_model(image_tensor)
             boundary_probs = torch.softmax(boundary_outputs, dim=1)
@@ -160,13 +174,7 @@ def predict_water_level(image_path: str) -> Dict[str, Any]:
     return result
 
 
-# =========================
-# 단독 실행 테스트용
-# =========================
-
 if __name__ == "__main__":
     test_image_path = input("이미지 경로 입력: ").strip()
-
     result = predict_water_level(test_image_path)
-
     print(result)

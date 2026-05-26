@@ -8,7 +8,7 @@ KST = timezone(timedelta(hours=9))
 BASE_URL = "https://capstone-project-54l6.onrender.com"
 ENDPOINT = f"{BASE_URL}/sensor-logs"
 
-NODE_IDS = [4, 5, 6]
+NODE_IDS = [1,2,3,4,5,6,7]
 
 START_DATE = datetime(2026, 5, 1, 0, 0, tzinfo=KST)
 END_DATE = datetime(2026, 6, 1, 0, 0, tzinfo=KST)
