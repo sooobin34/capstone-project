@@ -31,10 +31,11 @@ export default function MapPage() {
   }, [fetchFields])
 
   useEffect(() => {
-    if (!selectedFieldId) return
     setSelectedNode(null)
-    getNodes(selectedFieldId).then(async (data) => {
+
+    getNodes(selectedFieldId ?? undefined).then(async (data) => {
       setNodes(data)
+
       const statuses: Record<number, any> = {}
       await Promise.all(data.map(async (node) => {
         try {
@@ -44,6 +45,7 @@ export default function MapPage() {
           statuses[node.id] = null
         }
       }))
+
       setNodeStatuses(statuses)
     }).catch(e => console.error('기기 조회 실패', e))
   }, [selectedFieldId])
