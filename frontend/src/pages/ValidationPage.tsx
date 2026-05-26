@@ -247,7 +247,8 @@ export default function ValidationPage() {
 
       {tab === 'auto' ? (
         <>
-          {/* MRV 보고서 생성 흐름 */}
+        {/*
+         MRV 보고서 생성 흐름 
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
             <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>MRV 보고서 생성 흐름</p>
             <p style={{ fontSize: '11px', color: '#888', marginBottom: '16px' }}>센서 데이터 수집 → 일 요약 생성 → Validation 검증 수행 → MRV 보고서 생성</p>
@@ -262,7 +263,7 @@ export default function ValidationPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div>*/}
 
           {/* 검증 사진 목록 */}
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>

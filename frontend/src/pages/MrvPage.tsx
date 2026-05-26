@@ -116,6 +116,27 @@ export default function MrvPage() {
         <strong style={{ fontWeight: 500 }}>MRV (측정·보고·검증)</strong>란 AWD 물관리 방식 적용 시 온실가스 감축량을 객관적으로 측정·기록·검증하는 절차입니다.
       </div>
 
+{/* MRV 보고서 생성 흐름 */}
+<div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+  <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>MRV 보고서 생성 흐름</p>
+  <p style={{ fontSize: '11px', color: '#888', marginBottom: '16px' }}>센서 데이터 수집 → 일 요약 생성 → Validation 검증 수행 → MRV 보고서 생성</p>
+  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+    {[
+      { num: '01', title: '센서 데이터 수집', desc: 'LoRa 게이트웨이가 논의 수위와 배터리 상태를 실시간으로 측정하여 서버에 저장합니다.' },
+      { num: '02', title: '일일 요약 생성', desc: '하루 동안의 센서 데이터를 바탕으로 평균 수위와 논 상태를 자동으로 계산합니다.' },
+      { num: '03', title: 'Validation 검증 수행', desc: '현장 사진을 업로드하고 사람의 판단과 AI 분석 결과를 비교하여 센서 정확도를 검증합니다.' },
+      { num: '04', title: 'MRV 보고서 생성', desc: '수집된 센서 데이터와 검증 결과를 바탕으로 AWD 횟수, 탄소 감축량 등을 담은 공식 보고서를 생성합니다.' },
+    ].map((step) => (
+      <div key={step.num} style={{ background: '#f5f5f5', borderRadius: '10px', padding: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#1D9E75' }}>{step.num}</span>
+          <span style={{ fontSize: '12px', fontWeight: 500 }}>{step.title}</span>
+        </div>
+        <p style={{ fontSize: '11px', color: '#666', lineHeight: 1.5 }}>{step.desc}</p>
+      </div>
+    ))}
+  </div>
+</div>
       {/* 통합 필터 + 생성 */}
       <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
