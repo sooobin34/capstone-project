@@ -1,5 +1,5 @@
 ﻿import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, createContext, useContext } from 'react'
 import Home from './pages/Home'
 import SensorData from './pages/SensorData'
 import MapPage from './pages/MapPage'
@@ -7,6 +7,24 @@ import MrvPage from './pages/MrvPage'
 import AlertPage from './pages/AlertPage'
 import logo from './assets/logo_width.png'
 import ValidationPage from './pages/ValidationPage'
+
+// 전역 Context 타입
+interface FieldContextType {
+  selectedRegion: string
+  selectedFieldId: number | null
+  setSelectedRegion: (region: string) => void
+  setSelectedFieldId: (id: number | null) => void
+}
+
+// Context 생성 및 export (각 페이지에서 import해서 쓸 거야)
+export const FieldContext = createContext<FieldContextType>({
+  selectedRegion: '',
+  selectedFieldId: null,
+  setSelectedRegion: () => {},
+  setSelectedFieldId: () => {},
+})
+
+export const useFieldContext = () => useContext(FieldContext)
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard' },
@@ -45,15 +63,12 @@ function NavBar() {
 
         {isMobile ? (
           <>
-            {/* ?꾨쾭嫄?踰꾪듉 */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#555', padding: '4px 8px' }}
             >
               {menuOpen ? 'Close' : 'Menu'}
             </button>
-
-            {/* 紐⑤컮???쒕∼?ㅼ슫 硫붾돱 */}
             {menuOpen && (
               <div style={{
                 position: 'fixed', top: '48px', left: 0, right: 0,
@@ -111,22 +126,26 @@ function NavBar() {
 }
 
 export default function App() {
+  const [selectedRegion, setSelectedRegion] = useState('')
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
+
   return (
-    <BrowserRouter>
-      <div style={{ minHeight: '100vh', background: '#fafafa' }}>
-        <NavBar />
-        <Routes>
-          <Route path="/" element={<MapPage />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/dashboard" element={<Home />} />
-          <Route path="/sensor" element={<SensorData />} />
-          <Route path="/alerts" element={<AlertPage />} />
-          <Route path="/mrv" element={<MrvPage />} />
-          <Route path="/validation" element={<Navigate to="/validations" replace />} />
-          <Route path="/validations" element={<ValidationPage />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <FieldContext.Provider value={{ selectedRegion, selectedFieldId, setSelectedRegion, setSelectedFieldId }}>
+      <BrowserRouter>
+        <div style={{ minHeight: '100vh', background: '#fafafa' }}>
+          <NavBar />
+          <Routes>
+            <Route path="/" element={<MapPage />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/dashboard" element={<Home />} />
+            <Route path="/sensor" element={<SensorData />} />
+            <Route path="/alerts" element={<AlertPage />} />
+            <Route path="/mrv" element={<MrvPage />} />
+            <Route path="/validation" element={<Navigate to="/validations" replace />} />
+            <Route path="/validations" element={<ValidationPage />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </FieldContext.Provider>
   )
 }
-

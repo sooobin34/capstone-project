@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import SensorChart from '../components/sensor/SensorChart'
 import SensorStats from '../components/sensor/SensorStats'
 import { getFields, getNodes, getSensorLogsRange, getSensorStats, getNodeStatus, Field, Node } from '../api/dashboard'
+import { useFieldContext } from '../App'
 
 const periodMap: Record<string, '1h' | '1d' | '1w' | '1m'> = {
   '1시간': '1h', '1일': '1d', '1주': '1w', '1개월': '1m',
@@ -23,10 +24,10 @@ const statusColor = (status: string) => {
 }
 
 export default function SensorData() {
+  const { selectedFieldId, setSelectedFieldId, setSelectedRegion } = useFieldContext()
   const [fields, setFields] = useState<Field[]>([])
   const [nodes, setNodes] = useState<Node[]>([])
   const [nodeStatuses, setNodeStatuses] = useState<Record<number, any>>({})
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
   const [selectedTime, setSelectedTime] = useState('1일')
   const [chartData, setChartData] = useState<number[]>([])
@@ -91,6 +92,18 @@ export default function SensorData() {
     }
   }
 
+  // 논 선택 시 지역도 자동 업데이트
+  const handleFieldSelect = (fieldId: number | null) => {
+    setSelectedFieldId(fieldId)
+    setNodes([])
+    setChartData([])
+    setStats(null)
+    if (fieldId) {
+      const field = fields.find(f => f.id === fieldId)
+      if (field?.location_desc) setSelectedRegion(field.location_desc)
+    }
+  }
+
   const singleMode = selectedNodeId !== null
   const datasets = singleMode && chartData.length > 0
     ? [{ nodeId: selectedNodeId, label: `Node ${selectedNodeId}`, data: chartData }]
@@ -104,12 +117,7 @@ export default function SensorData() {
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={selectedFieldId ?? ''}
-          onChange={(e) => {
-            setSelectedFieldId(e.target.value ? Number(e.target.value) : null)
-            setNodes([])
-            setChartData([])
-            setStats(null)
-          }}
+          onChange={(e) => handleFieldSelect(e.target.value ? Number(e.target.value) : null)}
           style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', flex: '1 1 120px' }}
         >
           <option value="">논 선택</option>

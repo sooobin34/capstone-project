@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useFieldContext } from '../App'
 import {
   createMrvReport,
   downloadMrvExcel,
@@ -144,7 +145,7 @@ const SlideShow = ({ photos, onClickImage }: { photos: ValidationPhoto[]; onClic
 export default function MrvPage() {
   const [fields, setFields] = useState<Field[]>([])
   const [reports, setReports] = useState<MrvListItem[]>([])
-  const [selectedFieldId, setSelectedFieldId] = useState<number | ''>('')
+  const { selectedFieldId, setSelectedFieldId, setSelectedRegion } = useFieldContext()
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null)
   const [selectedReportView, setSelectedReportView] = useState<MrvReportView | null>(null)
@@ -181,7 +182,7 @@ export default function MrvPage() {
   }, [])
 
   useEffect(() => {
-    loadReports(selectedFieldId ? Number(selectedFieldId) : undefined)
+    loadReports(selectedFieldId ?? undefined)
     if (selectedFieldId) {
       getValidationRecords(Number(selectedFieldId))
         .then((data) => setValidationPhotos((data ?? []).slice(0, 5)))
@@ -215,14 +216,23 @@ export default function MrvPage() {
     setCreating(true)
     setCreateError('')
     try {
-      await createMrvReport(Number(selectedFieldId), selectedMonth)
-      await loadReports(Number(selectedFieldId))
+      await createMrvReport(selectedFieldId, selectedMonth)
+      await loadReports(selectedFieldId)
     } catch (e: any) {
       setCreateError(e?.response?.data?.detail ?? e?.response?.data?.message ?? '보고서 생성에 실패했습니다.')
     } finally {
       setCreating(false)
     }
   }
+
+  const handleFieldSelect = (value: string) => {
+  const fieldId = value ? Number(value) : null
+  setSelectedFieldId(fieldId)
+  if (fieldId) {
+    const field = fields.find(f => f.id === fieldId)
+    if (field?.location_desc) setSelectedRegion(field.location_desc)
+  }
+}
 
   const filteredReports = useMemo(
     () =>
@@ -280,8 +290,8 @@ export default function MrvPage() {
       <div style={{ ...cardStyle, marginBottom: '16px' }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
-            value={selectedFieldId}
-            onChange={(e) => setSelectedFieldId(e.target.value ? Number(e.target.value) : '')}
+            value={selectedFieldId ?? ''}
+            onChange={(e) => handleFieldSelect(e.target.value)}
             style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', flex: '1 1 140px' }}
           >
             <option value="">논 선택</option>

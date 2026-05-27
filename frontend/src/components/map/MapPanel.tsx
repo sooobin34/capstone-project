@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { REGIONS } from '../../data/regions'
 import FieldInfo from './FieldInfo'
 import { Field } from '../../api/dashboard'
 import api from '../../api/axios'
+import { useState } from 'react'
 
 interface MapPanelProps {
   fields: Field[]
   selectedFieldId: number | null
+  selectedRegion: string
   onFieldSelect: (fieldId: number | null) => void
+  onRegionSelect: (region: string) => void
   onFieldsRefresh: () => void
   sensors: {
     id: number
@@ -21,12 +24,10 @@ interface MapPanelProps {
 }
 
 export default function MapPanel({
-  fields, selectedFieldId, onFieldSelect,
+  fields, selectedFieldId, selectedRegion,
+  onFieldSelect, onRegionSelect,
   onFieldsRefresh, sensors, fieldName, loading
 }: MapPanelProps) {
-  const [selectedRegion, setSelectedRegion] = useState('')
-
-  // 논/노드 추가 관련 state (주석처리된 기능용)
   const [showAddField, setShowAddField] = useState(false)
   const [showAddNode, setShowAddNode] = useState(false)
   const [newField, setNewField] = useState({ field_name: '', latitude: '', longitude: '', location_desc: '' })
@@ -107,8 +108,6 @@ export default function MapPanel({
 
   return (
     <div style={{ padding: '16px', minWidth: '320px' }}>
-
-      {/* 메시지 */}
       {message && (
         <div style={{
           fontSize: '12px', padding: '8px 12px', borderRadius: '6px',
@@ -120,7 +119,6 @@ export default function MapPanel({
         </div>
       )}
 
-      {/*논/노드 추가 영역 - 주석처리*/}
       <div style={{ marginBottom: '16px' }}>
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px', fontWeight: 500 }}>추가</p>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -176,13 +174,11 @@ export default function MapPanel({
           </div>
         )}
       </div>
-      
 
-      {/* 지역/논 선택 영역 */}
       <div style={{ marginBottom: '16px' }}>
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px', fontWeight: 500 }}>지역 선택</p>
         <select value={selectedRegion}
-          onChange={e => setSelectedRegion(e.target.value)}
+          onChange={e => onRegionSelect(e.target.value)}
           style={{ ...inputStyle, marginBottom: '8px' }}>
           <option value="">전체 지역</option>
           {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -196,16 +192,13 @@ export default function MapPanel({
         >
           <option value="">전체 논</option>
           {filteredFields.map(f => (
-            <option key={f.id} value={f.id}>
-              {f.field_name}
-            </option>
+            <option key={f.id} value={f.id}>{f.field_name}</option>
           ))}
         </select>
       </div>
 
       <div style={{ borderTop: '0.5px solid #f0f0f0', marginBottom: '16px' }} />
 
-      {/* 센서 상태 */}
       {loading ? (
         <p style={{ fontSize: '13px', color: '#aaa', textAlign: 'center', padding: '24px 0' }}>불러오는 중...</p>
       ) : (

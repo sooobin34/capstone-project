@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
 import { getAlerts, getFields, resolveAlert, Alert, Field } from '../api/dashboard'
+import { useFieldContext } from '../App'
 
 export default function AlertPage() {
+  const { selectedFieldId, setSelectedFieldId, setSelectedRegion } = useFieldContext()
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [fields, setFields] = useState<Field[]>([])
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
   const [selectedType, setSelectedType] = useState('')
 
   useEffect(() => {
     fetchFields()
-    fetchAlerts()
   }, [])
 
   useEffect(() => {
@@ -36,6 +36,14 @@ export default function AlertPage() {
       console.error('알람 조회 실패', e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFieldSelect = (fieldId: number | null) => {
+    setSelectedFieldId(fieldId)
+    if (fieldId) {
+      const field = fields.find(f => f.id === fieldId)
+      if (field?.location_desc) setSelectedRegion(field.location_desc)
     }
   }
 
@@ -72,7 +80,6 @@ export default function AlertPage() {
     <div style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
       <h2 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '16px' }}>알람</h2>
 
-      {/* 요약 카드 - 모바일: 1열, PC: 3열 */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -90,7 +97,6 @@ export default function AlertPage() {
         ))}
       </div>
 
-      {/* 노드별 알람 집중도 */}
       {Object.keys(nodeAlertCount).length > 0 && (
         <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
           <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '12px' }}>노드별 알람 집중도 (24시간)</p>
@@ -106,11 +112,10 @@ export default function AlertPage() {
         </div>
       )}
 
-      {/* 필터 */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={selectedFieldId ?? ''}
-          onChange={(e) => setSelectedFieldId(e.target.value ? Number(e.target.value) : null)}
+          onChange={(e) => handleFieldSelect(e.target.value ? Number(e.target.value) : null)}
           style={{ fontSize: '13px', padding: '7px 12px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', flex: '1 1 120px' }}
         >
           <option value="">논 선택</option>
@@ -139,7 +144,6 @@ export default function AlertPage() {
         </button>
       </div>
 
-      {/* 알람 목록 */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: '#aaa', fontSize: '14px' }}>불러오는 중...</div>
       ) : Object.keys(grouped).length === 0 ? (

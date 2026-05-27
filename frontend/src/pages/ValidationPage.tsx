@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useFieldContext } from '../App'
 import { getLatestSensorLog, uploadValidationRecord, getValidationRecords, getValidationSummary, analyzeValidationRecord, getFields, getNodes } from '../api/dashboard'
 
 const SURFACE_STATUS_OPTIONS = [
@@ -48,6 +49,7 @@ function createImageTitle(observedStatus: string, angle: string, distance: strin
 const NODE_ID_FOR_LOG = 7
 
 export default function ValidationPage() {
+  const { selectedFieldId, setSelectedFieldId, setSelectedRegion } = useFieldContext()
   const [tab, setTab] = useState<'field' | 'auto'>('field')
   const [latestLog, setLatestLog] = useState<any>(null)
   const [logLoading, setLogLoading] = useState(false)
@@ -77,19 +79,18 @@ export default function ValidationPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterDate, setFilterDate] = useState('')
 
-  const [filterFieldId, setFilterFieldId] = useState<number | ''>('')
   const [filterNodeId, setFilterNodeId] = useState<number | ''>('')
   const [filterNodes, setFilterNodes] = useState<any[]>([])
 
   useEffect(() => {
-    if (filterFieldId) {
-      getNodes(Number(filterFieldId)).then(setFilterNodes).catch(console.error)
-      setFilterNodeId('')
-    } else {
-      getNodes().then(setFilterNodes).catch(console.error)
-      setFilterNodeId('')
-    }
-  }, [filterFieldId])
+  if (selectedFieldId) {
+    getNodes(selectedFieldId).then(setFilterNodes).catch(console.error)
+    setFilterNodeId('')
+  } else {
+    getNodes().then(setFilterNodes).catch(console.error)
+    setFilterNodeId('')
+  }
+}, [selectedFieldId])
   
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
@@ -134,10 +135,10 @@ export default function ValidationPage() {
   }
 
   const filteredRecords = records
-    .filter(r => filterFieldId ? r.field_id === Number(filterFieldId) : true)
-    .filter(r => filterNodeId ? r.node_id === Number(filterNodeId) : true)
-    .filter(r => filterStatus ? toAutoStatusLabel(r.ai_predicted_status) === filterStatus : true)
-    .filter(r => filterDate ? r.record_date === filterDate : true)
+  .filter(r => selectedFieldId ? r.field_id === selectedFieldId : true) 
+  .filter(r => filterNodeId ? r.node_id === Number(filterNodeId) : true)
+  .filter(r => filterStatus ? toAutoStatusLabel(r.ai_predicted_status) === filterStatus : true)
+  .filter(r => filterDate ? r.record_date === filterDate : true)
 
   const handleConditionToggle = (c: string) => {
     setConditions(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
@@ -212,6 +213,15 @@ export default function ValidationPage() {
     }
   }
 
+  const handleFilterFieldSelect = (value: string) => {
+    const fieldId = value ? Number(value) : null
+     setSelectedFieldId(fieldId)
+     if (fieldId) {
+       const field = fields.find(f => f.id === fieldId)
+        if (field?.location_desc) setSelectedRegion(field.location_desc)
+      }
+    }
+
   const inputStyle = {
     fontSize: '13px', padding: '7px 12px', borderRadius: '8px',
     border: '0.5px solid #ccc', background: 'white', width: '100%',
@@ -260,8 +270,8 @@ export default function ValidationPage() {
           <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '8px 16px' }}>
             <div style={{ display: 'flex', gap: '8px', padding: '8px 0 10px', borderBottom: '0.5px solid #f0f0f0', flexWrap: 'wrap' }}>
               <select
-                value={filterFieldId}
-                onChange={(e) => setFilterFieldId(e.target.value ? Number(e.target.value) : '')}
+                value={selectedFieldId ?? ''}
+                onChange={(e) => handleFilterFieldSelect(e.target.value)}
                 style={{ fontSize: '13px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', color: '#333' }}
               >
                 <option value="">전체 논</option>
@@ -290,13 +300,13 @@ export default function ValidationPage() {
               </select>
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
                 style={{ fontSize: '12px', padding: '5px 8px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', minWidth: '130px', color: '#333' }} />
-              {(filterFieldId || filterNodeId || filterStatus || filterDate) && (
+              {(selectedFieldId || filterNodeId || filterStatus || filterDate) && (
                 <button onClick={() => {
-                          setFilterFieldId('')
-                          setFilterNodeId('')
-                          setFilterStatus('')
-                          setFilterDate('')
-                        }}
+                    setSelectedFieldId(null) 
+                    setFilterNodeId('')
+                    setFilterStatus('')
+                    setFilterDate('')
+                  }}
                   style={{ fontSize: '13px', padding: '5px 10px', borderRadius: '8px', border: '0.5px solid #ccc', background: 'white', cursor: 'pointer', color: '#888' }}>
                   초기화
                 </button>

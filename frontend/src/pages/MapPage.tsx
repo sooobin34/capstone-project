@@ -2,18 +2,19 @@ import { useState, useEffect, useCallback } from 'react'
 import FieldMap from '../components/map/FieldMap'
 import MapPanel from '../components/map/MapPanel'
 import { getFields, getNodes, getNodeStatus, Field, Node } from '../api/dashboard'
+import { useFieldContext } from '../App'
 
 export default function MapPage() {
+  const { selectedFieldId, setSelectedFieldId, selectedRegion, setSelectedRegion } = useFieldContext()
   const [fields, setFields] = useState<Field[]>([])
   const [nodes, setNodes] = useState<Node[]>([])
   const [nodeStatuses, setNodeStatuses] = useState<Record<number, any>>({})
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<any>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
-  const BOTTOM_PANEL_HEIGHT = 350  // 패널 높이 (화면의 약 절반)
+  const BOTTOM_PANEL_HEIGHT = 350
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -52,6 +53,14 @@ export default function MapPage() {
       setNodeStatuses(statuses)
     }).catch(e => console.error('기기 조회 실패', e))
   }, [selectedFieldId])
+
+  const handleFieldSelect = (id: number | null) => {
+    setSelectedFieldId(id)
+    if (id) {
+      const field = fields.find(f => f.id === id)
+      if (field?.location_desc) setSelectedRegion(field.location_desc)
+    }
+  }
 
   const selectedField = fields.find((f) => f.id === selectedFieldId)
 
@@ -92,7 +101,6 @@ export default function MapPage() {
 
   return (
     <div style={{ position: 'fixed', top: '48px', left: 0, right: 0, bottom: 0 }}>
-      {/* 지도 - 모바일에서 패널이 열리면 위쪽으로 올라가도록 bottom 조정 */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
         bottom: isMobile && isPanelOpen ? `${BOTTOM_PANEL_HEIGHT}px` : 0,
@@ -105,14 +113,11 @@ export default function MapPage() {
             ? [selectedField.latitude, selectedField.longitude]
             : [35.8468, 127.1294]
           }
-          onNodeClick={(node) => {
-            setSelectedNode(node)
-          }}
+          onNodeClick={(node) => setSelectedNode(node)}
           selectedNodeId={selectedNode?.id ?? null}
         />
       </div>
 
-      {/* PC: 왼쪽 패널 */}
       {!isMobile && (
         <>
           <div style={{
@@ -128,7 +133,9 @@ export default function MapPage() {
               <MapPanel
                 fields={fields}
                 selectedFieldId={selectedFieldId}
-                onFieldSelect={setSelectedFieldId}
+                selectedRegion={selectedRegion}
+                onFieldSelect={handleFieldSelect}
+                onRegionSelect={setSelectedRegion}
                 onFieldsRefresh={fetchFields}
                 sensors={fieldInfoSensors}
                 fieldName={selectedField?.field_name ?? ''}
@@ -155,10 +162,8 @@ export default function MapPage() {
         </>
       )}
 
-      {/* 모바일: 하단에서 올라오는 패널 */}
       {isMobile && (
         <>
-          {/* 드래그 핸들 겸 토글 버튼 */}
           <button
             onClick={() => setIsPanelOpen(!isPanelOpen)}
             style={{
@@ -176,15 +181,13 @@ export default function MapPage() {
             {isPanelOpen ? '∨' : '∧'}
           </button>
 
-          {/* 하단 슬라이드 패널 */}
           <div style={{
             position: 'absolute',
             bottom: 0, left: 0, right: 0,
             height: isPanelOpen ? `${BOTTOM_PANEL_HEIGHT}px` : '0px',
             background: 'white',
             borderTop: '0.5px solid #e0e0e0',
-            overflowY: 'auto',
-            overflowX: 'hidden',
+            overflowY: 'auto', overflowX: 'hidden',
             transition: 'height 0.3s ease',
             zIndex: 10,
             boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
@@ -192,10 +195,12 @@ export default function MapPage() {
             <MapPanel
               fields={fields}
               selectedFieldId={selectedFieldId}
+              selectedRegion={selectedRegion}
               onFieldSelect={(id) => {
-                setSelectedFieldId(id)
+                handleFieldSelect(id)
                 setIsPanelOpen(false)
               }}
+              onRegionSelect={setSelectedRegion}
               onFieldsRefresh={fetchFields}
               sensors={fieldInfoSensors}
               fieldName={selectedField?.field_name ?? ''}
@@ -205,7 +210,6 @@ export default function MapPage() {
         </>
       )}
 
-      {/* 노드 클릭 시 정보 카드 */}
       {selectedNode && (
         <div style={{
           position: 'absolute',
@@ -220,10 +224,8 @@ export default function MapPage() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <p style={{ fontSize: '14px', fontWeight: 600 }}>Node {selectedNode.id}</p>
-            <button
-              onClick={() => setSelectedNode(null)}
-              style={{ fontSize: '16px', border: 'none', background: 'none', cursor: 'pointer', color: '#aaa', padding: 0 }}
-            >✕</button>
+            <button onClick={() => setSelectedNode(null)}
+              style={{ fontSize: '16px', border: 'none', background: 'none', cursor: 'pointer', color: '#aaa', padding: 0 }}>✕</button>
           </div>
           <p style={{ fontSize: '11px', color: '#888', marginBottom: '10px' }}>{selectedNode.name}</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -231,8 +233,7 @@ export default function MapPage() {
               <p style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>수위</p>
               <p style={{ fontSize: '16px', fontWeight: 500 }}>
                 {selectedNode.level !== null && selectedNode.level !== undefined
-                  ? `${selectedNode.level > 0 ? '+' : ''}${selectedNode.level}cm`
-                  : '-'}
+                  ? `${selectedNode.level > 0 ? '+' : ''}${selectedNode.level}cm` : '-'}
               </p>
             </div>
             <div style={{ background: '#f5f5f5', borderRadius: '8px', padding: '8px 12px' }}>

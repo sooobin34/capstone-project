@@ -5,16 +5,17 @@ import AlarmSummaryCard from '../components/dashboard/AlarmSummaryCard'
 import MrvSummaryCard from '../components/dashboard/MrvSummaryCard'
 import { getDashboard, getSensorLogsRange, mapWaterStatus, getFields, getNodes, getNodeStatus, getAlerts, getMrvReports } from '../api/dashboard'
 import FieldMap from '../components/map/FieldMap'
+import { useFieldContext } from '../App'
 
 export default function Home() {
   const navigate = useNavigate()
+  const { selectedFieldId, setSelectedFieldId, setSelectedRegion } = useFieldContext()
   const [dashboard, setDashboard] = useState<any>(null)
   const [chartData, setChartData] = useState<number[]>([])
   const [chartLabels, setChartLabels] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [fields, setFields] = useState<any[]>([])
   const [nodes, setNodes] = useState<any[]>([])
-  const [selectedFieldId, setSelectedFieldId] = useState<number | ''>('')
   const [selectedNodeId, setSelectedNodeId] = useState<number | ''>('')
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
@@ -24,6 +25,16 @@ export default function Home() {
   const [selectedMrv, setSelectedMrv] = useState<any>(null)
 
   const isMobile = window.innerWidth <= 768
+
+  const handleFieldSelect = (value: string) => {
+    const fieldId = value ? Number(value) : null
+    setSelectedFieldId(fieldId)
+    setSelectedNodeId('')
+    if (fieldId) {
+      const field = fields.find(f => f.id === fieldId)
+      if (field?.location_desc) setSelectedRegion(field.location_desc)
+    }
+  }
 
   useEffect(() => {
     getFields().then(setFields).catch(console.error)
@@ -50,13 +61,13 @@ export default function Home() {
 
   useEffect(() => {
     if (selectedFieldId) {
-      getNodes(Number(selectedFieldId)).then(setNodes).catch(console.error)
-      getAlerts(Number(selectedFieldId)).then(alerts => {
+      getNodes(selectedFieldId).then(setNodes).catch(console.error)
+      getAlerts(selectedFieldId).then(alerts => {
         setSelectedAlerts(alerts.slice(0, 3))
         setSelectedAlertTotal(alerts.length)
         setSelectedAlertUnresolved(alerts.filter((a: any) => !a.is_resolved).length)
       }).catch(console.error)
-      getMrvReports(Number(selectedFieldId)).then(reports => {
+      getMrvReports(selectedFieldId).then(reports => {
         if (reports.length > 0) {
           const latest = reports.sort((a: any, b: any) =>
             b.report_month.localeCompare(a.report_month)
@@ -215,8 +226,8 @@ export default function Home() {
         <div style={{ background: 'white', border: '0.5px solid #e0e0e0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', gap: '6px' }}>
             <select
-              value={selectedFieldId}
-              onChange={(e) => { setSelectedFieldId(e.target.value ? Number(e.target.value) : ''); setSelectedNodeId('') }}
+              value={selectedFieldId ?? ''}
+              onChange={(e) => handleFieldSelect(e.target.value)}
               style={{ flex: 1, fontSize: '12px', padding: '6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5' }}
             >
               <option value="">논 선택</option>
@@ -241,8 +252,8 @@ export default function Home() {
                   name: `Node ${n.id}`,
   }))}
                 center={[
-                  fields.find(f => f.id === Number(selectedFieldId))?.latitude ?? fields[0].latitude,
-                  fields.find(f => f.id === Number(selectedFieldId))?.longitude ?? fields[0].longitude,
+                  fields.find(f => f.id === selectedFieldId)?.latitude ?? fields[0].latitude,
+                  fields.find(f => f.id === selectedFieldId)?.longitude ?? fields[0].longitude,
                 ]}
               />
             ) : (
@@ -347,8 +358,8 @@ export default function Home() {
       }}>
         <div style={{ display: 'flex', gap: '6px' }}>
           <select
-            value={selectedFieldId}
-            onChange={(e) => { setSelectedFieldId(e.target.value ? Number(e.target.value) : ''); setSelectedNodeId('') }}
+            value={selectedFieldId ?? ''}
+            onChange={(e) => handleFieldSelect(e.target.value)}
             style={{ flex: 1, fontSize: '12px', padding: '5px 6px', borderRadius: '8px', border: '0.5px solid #e0e0e0', background: '#f5f5f5', color: '#222' }}
           >
             <option value="">논 선택</option>
@@ -373,8 +384,8 @@ export default function Home() {
     name: `Node ${n.id}`,
   }))}
   center={[
-    fields.find(f => f.id === Number(selectedFieldId))?.latitude ?? fields[0].latitude,
-    fields.find(f => f.id === Number(selectedFieldId))?.longitude ?? fields[0].longitude,
+    fields.find(f => f.id === selectedFieldId)?.latitude ?? fields[0].latitude,
+    fields.find(f => f.id === selectedFieldId)?.longitude ?? fields[0].longitude,
   ]}
 />
           ) : (
