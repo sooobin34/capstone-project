@@ -677,6 +677,130 @@ def update_mrv_report_status(report_id: int, payload: MrvReportStatusUpdate, db:
     return success_response(report, "MRV 보고서 상태 변경 성공")
 
 
+@router.get("/{report_id}/view")
+def get_mrv_report_view(report_id: int, db: Session = Depends(get_db)):
+    report = db.query(MrvReport).filter(MrvReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    field = db.query(Field).filter(Field.id == report.field_id).first()
+    if not field:
+        raise HTTPException(status_code=404, detail="Field not found.")
+
+    start_date, end_date = get_month_range(report.report_month)
+    summaries = (
+        db.query(AwdDailySummary)
+        .join(IotNode, IotNode.id == AwdDailySummary.node_id)
+        .filter(
+            IotNode.field_id == report.field_id,
+            AwdDailySummary.record_date >= start_date,
+            AwdDailySummary.record_date < end_date,
+        )
+        .order_by(AwdDailySummary.record_date.asc(), AwdDailySummary.id.asc())
+        .all()
+    )
+    nodes = db.query(IotNode).filter(IotNode.field_id == report.field_id).order_by(IotNode.id.asc()).all()
+
+    daily_summaries = aggregate_daily_summaries(summaries)
+    status_counts = summarize_status_counts(daily_summaries)
+    dominant_status = get_dominant_status(status_counts)
+    month_avg = get_month_avg_inner_level(daily_summaries)
+    weekly_groups = group_summaries_by_week(daily_summaries)
+
+    weekly_analysis = []
+    for week_no, week_items in weekly_groups:
+        if not week_items:
+            continue
+
+        values = [float(item.avg_inner_level) for item in week_items if item.avg_inner_level is not None]
+        weekly_analysis.append(
+            {
+                "week_no": week_no,
+                "start_date": week_items[0].record_date.isoformat(),
+                "end_date": week_items[-1].record_date.isoformat(),
+                "avg_inner_level_cm": round(sum(values) / len(values), 2) if values else None,
+                "min_inner_level_cm": round(min(values), 2) if values else None,
+                "max_inner_level_cm": round(max(values), 2) if values else None,
+                "status_flow": get_status_flow(week_items),
+            }
+        )
+
+    validation = get_validation_summary(report.field_id, start_date, end_date, db)
+    validation_rows = get_validation_rows(report.field_id, start_date, end_date, db)
+    validation_snapshots = [
+        {
+            "record_id": row.id,
+            "record_date": row.record_date.isoformat(),
+            "node_id": row.node_id,
+            "sensor_predicted_status": row.sensor_predicted_status,
+            "observed_surface_status": row.observed_surface_status,
+            "ai_predicted_status": row.ai_predicted_status,
+            "ai_confidence": float(row.ai_confidence) if row.ai_confidence is not None else None,
+            "sensor_observed_match": row.is_match,
+            "ai_sensor_match": row.ai_sensor_match,
+            "image_url": row.image_url,
+            "note": row.note,
+        }
+        for row in validation_rows
+    ]
+
+    if report.total_awd_cycles == 0:
+        conclusion = [
+            "No complete AWD cycle was observed in this period.",
+            "Consider extending monitoring duration or increasing dry-down intervals for clearer AWD transitions.",
+        ]
+    else:
+        conclusion = [
+            f"{report.total_awd_cycles} AWD cycles were detected during the reporting period.",
+            f"Estimated carbon reduction is {report.carbon_reduction} kgCO2-eq.",
+        ]
+
+    payload = {
+        "report_id": report.id,
+        "overview": {
+            "field_id": field.id,
+            "field_name": field.field_name,
+            "field_location_desc": field.location_desc,
+            "report_month": report.report_month,
+            "period_start": start_date.isoformat(),
+            "period_end_exclusive": end_date.isoformat(),
+            "node_count": len(nodes),
+            "generated_at": report.created_at.isoformat() if report.created_at else None,
+            "status": report.status,
+        },
+        "summary": {
+            "total_awd_cycles": report.total_awd_cycles,
+            "flood_days": report.flood_days,
+            "carbon_reduction_kgco2eq": float(report.carbon_reduction) if report.carbon_reduction is not None else None,
+            "dominant_status": dominant_status,
+            "month_avg_inner_level_cm": month_avg,
+            "status_counts": status_counts,
+        },
+        "weekly_analysis": weekly_analysis,
+        "validation_results": {
+            "validation_method": validation["validation_method"],
+            "sample_count": validation["validation_sample_count"],
+            "sensor_observed_match_count": validation["validation_match_count"],
+            "sensor_observed_mismatch_count": validation["validation_mismatch_count"],
+            "sensor_observed_unknown_count": validation["validation_unknown_count"],
+            "sensor_observed_accuracy": validation["validation_accuracy"],
+            "ai_sensor_match_count": validation["ai_sensor_match_count"],
+            "ai_sensor_mismatch_count": validation["ai_sensor_mismatch_count"],
+            "ai_sensor_unknown_count": validation["ai_sensor_unknown_count"],
+            "ai_sensor_accuracy": validation["ai_sensor_accuracy"],
+            "note": validation["validation_note"],
+            "rows": validation_snapshots,
+        },
+        "conclusion": conclusion,
+        "download": {
+            "pdf_url": f"/mrv-reports/{report.id}/download/pdf",
+            "excel_url": f"/mrv-reports/{report.id}/download/excel",
+        },
+    }
+
+    return success_response(payload, "MRV report view data retrieved successfully.")
+
+
 @router.get("/{report_id}/download/pdf")
 def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     report = db.query(MrvReport).filter(MrvReport.id == report_id).first()
