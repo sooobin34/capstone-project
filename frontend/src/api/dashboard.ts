@@ -35,6 +35,69 @@ export interface SensorLog {
   created_at: string
 }
 
+export interface MrvReportView {
+  report_id: number
+  overview: {
+    field_id: number
+    field_name: string
+    field_location_desc: string | null
+    report_month: string
+    period_start: string
+    period_end_exclusive: string
+    node_count: number
+    generated_at: string | null
+    status: string
+  }
+  summary: {
+    total_awd_cycles: number
+    flood_days: number
+    carbon_reduction_kgco2eq: number | null
+    dominant_status: string
+    month_avg_inner_level_cm: number | null
+    status_counts: Record<string, number>
+  }
+  weekly_analysis: Array<{
+    week_no: number
+    start_date: string
+    end_date: string
+    avg_inner_level_cm: number | null
+    min_inner_level_cm: number | null
+    max_inner_level_cm: number | null
+    status_flow: string
+  }>
+  validation_results: {
+    validation_method: string
+    sample_count: number
+    sensor_observed_match_count: number
+    sensor_observed_mismatch_count: number
+    sensor_observed_unknown_count: number
+    sensor_observed_accuracy: number
+    ai_sensor_match_count: number
+    ai_sensor_mismatch_count: number
+    ai_sensor_unknown_count: number
+    ai_sensor_accuracy: number
+    note: string
+    rows: Array<{
+      record_id: number
+      record_date: string
+      node_id: number | null
+      sensor_predicted_status: string | null
+      observed_surface_status: string | null
+      ai_predicted_status: string | null
+      ai_confidence: number | null
+      sensor_observed_match: boolean | null
+      ai_sensor_match: boolean | null
+      image_url: string | null
+      note: string | null
+    }>
+  }
+  conclusion: string[]
+  download: {
+    pdf_url: string
+    excel_url: string
+  }
+}
+
 export const getFields = async (): Promise<Field[]> => {
   const res = await api.get('/fields')
   return (res.data as any).data
@@ -72,6 +135,11 @@ export const resolveAlert = async (alertId: number) => {
 export const getMrvReports = async (fieldId?: number) => {
   const url = fieldId ? `/mrv-reports?field_id=${fieldId}` : '/mrv-reports'
   const res = await api.get(url)
+  return (res.data as any).data
+}
+
+export const getMrvReportView = async (reportId: number): Promise<MrvReportView> => {
+  const res = await api.get(`/mrv-reports/${reportId}/view`)
   return (res.data as any).data
 }
 
