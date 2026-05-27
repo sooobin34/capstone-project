@@ -35,7 +35,7 @@ function MapUpdater({ center }: { center: [number, number] }) {
 
 const createNodeIcon = (selected: boolean, level: number | null | undefined, nodeId: number) => {
   const label = level !== null && level !== undefined ? `${level > 0 ? '+' : ''}${level} cm` : '-'
-  const dotColor = selected ? '#1D9E75' : '#1D9E75'
+  const dotColor = '#1D9E75'
   return L.divIcon({
     className: '',
     html: `
@@ -44,7 +44,7 @@ const createNodeIcon = (selected: boolean, level: number | null | undefined, nod
         border-radius: 8px;
         padding: 6px 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        border: 1px solid #e0e0e0;
+        border: 1px solid ${selected ? '#1D9E75' : '#e0e0e0'};
         position: relative;
         min-width: 70px;
         text-align: left;
@@ -72,6 +72,8 @@ const createNodeIcon = (selected: boolean, level: number | null | undefined, nod
   })
 }
 
+const VWORLD_KEY = import.meta.env.VITE_VWORLD_KEY
+
 export default function FieldMap({ sensors, center, onNodeClick, selectedNodeId }: FieldMapProps) {
   const [isSatellite, setIsSatellite] = useState(false)
 
@@ -85,12 +87,11 @@ export default function FieldMap({ sensors, center, onNodeClick, selectedNodeId 
       >
         <TileLayer
           attribution={isSatellite
-  ? '© Mapbox'
-  : '&copy; OpenStreetMap contributors'}
+            ? '© 브이월드'
+            : '© 브이월드'}
           url={isSatellite
-  ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_TOKEN}`
-  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-
+            ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Satellite/{z}/{y}/{x}.jpeg`
+            : `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`}
         />
         <MapUpdater center={center} />
         {sensors.map((sensor) => (
