@@ -72,6 +72,19 @@ const reportSectionStyle: React.CSSProperties = {
   background: '#fff',
 }
 
+function useIsMobile(maxWidth = 640) {
+  const [isMobile, setIsMobile] = useState(() => (typeof window === 'undefined' ? false : window.innerWidth <= maxWidth))
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth <= maxWidth)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [maxWidth])
+
+  return isMobile
+}
+
 function formatNumber(value: number | null | undefined, suffix = '') {
   if (value === null || value === undefined) return '-'
   const text = Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, '')
@@ -145,7 +158,7 @@ function SectionHeader({ num, title }: { num: string; title: string }) {
   )
 }
 
-function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickImage: (url: string) => void }) {
+function ReportDocument({ view, onClickImage, isMobile }: { view: MrvReportView; onClickImage: (url: string) => void; isMobile: boolean }) {
   const { overview, summary, weekly_analysis, validation_results, conclusion } = view
   const statusCounts = summary.status_counts
   const maxDays = Math.max(1, ...STATUS_ORDER.map((status) => statusCounts[status] ?? 0))
@@ -159,6 +172,27 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
   ]
 
   const representativeImages = validation_results.rows.filter((row) => row.image_url).slice(0, 3)
+  const validationRows = [
+    ['검증 샘플', `${validation_results.sample_count}건`],
+    ['센서-관찰 일치/불일치', `${validation_results.sensor_observed_match_count}건 / ${validation_results.sensor_observed_mismatch_count}건`],
+    ['센서-관찰 일치율', formatNumber(validation_results.sensor_observed_accuracy, '%')],
+    ['AI-센서 일치/불일치', `${validation_results.ai_sensor_match_count}건 / ${validation_results.ai_sensor_mismatch_count}건`],
+    ['AI-센서 일치율', formatNumber(validation_results.ai_sensor_accuracy, '%')],
+    ['비고', validation_results.note && validation_results.note !== '별도 비고 없음' ? validation_results.note : '-'],
+  ]
+  const downloadLinkStyle: React.CSSProperties = {
+    padding: isMobile ? '10px 11px' : '8px 11px',
+    border: '1px solid rgba(255,255,255,0.55)',
+    borderRadius: 6,
+    color: 'white',
+    textDecoration: 'none',
+    fontSize: 12,
+    fontWeight: 700,
+    background: 'rgba(255,255,255,0.1)',
+    textAlign: 'center',
+    boxSizing: 'border-box',
+    flex: isMobile ? '1 1 0' : '0 0 auto',
+  }
 
   return (
     <div
@@ -168,14 +202,14 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
         overflow: 'hidden',
         background: '#fff',
         fontSize: 13,
-        boxShadow: '0 14px 35px rgba(16, 24, 40, 0.08)',
+        boxShadow: isMobile ? '0 8px 22px rgba(16, 24, 40, 0.07)' : '0 14px 35px rgba(16, 24, 40, 0.08)',
       }}
     >
       <div
         style={{
           background: '#0F6B4F',
           color: 'white',
-          padding: '18px 22px',
+          padding: isMobile ? '14px 14px' : '18px 22px',
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
@@ -183,9 +217,9 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ minWidth: 240 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0 }}>AquaPaddy MRV 보고서</div>
-          <div style={{ fontSize: 12, opacity: 0.9, marginTop: 5 }}>
+        <div style={{ minWidth: 0, flex: '1 1 220px' }}>
+          <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, letterSpacing: 0 }}>AquaPaddy MRV 보고서</div>
+          <div style={{ fontSize: 12, opacity: 0.9, marginTop: 5, lineHeight: 1.5 }}>
             {overview.field_name} · 분석기간 {overview.period_start} ~ {overview.period_end_exclusive} · 보고월 {overview.report_month}
           </div>
           <div
@@ -204,21 +238,12 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <a
             href={downloadMrvPdf(view.report_id)}
             target="_blank"
             rel="noreferrer"
-            style={{
-              padding: '8px 11px',
-              border: '1px solid rgba(255,255,255,0.55)',
-              borderRadius: 6,
-              color: 'white',
-              textDecoration: 'none',
-              fontSize: 12,
-              fontWeight: 700,
-              background: 'rgba(255,255,255,0.1)',
-            }}
+            style={downloadLinkStyle}
           >
             PDF 다운로드
           </a>
@@ -226,16 +251,7 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
             href={downloadMrvExcel(view.report_id)}
             target="_blank"
             rel="noreferrer"
-            style={{
-              padding: '8px 11px',
-              border: '1px solid rgba(255,255,255,0.55)',
-              borderRadius: 6,
-              color: 'white',
-              textDecoration: 'none',
-              fontSize: 12,
-              fontWeight: 700,
-              background: 'rgba(255,255,255,0.1)',
-            }}
+            style={downloadLinkStyle}
           >
             Excel 다운로드
           </a>
@@ -245,9 +261,9 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(210px, 1fr))',
           gap: 10,
-          padding: '12px 22px',
+          padding: isMobile ? '12px 14px' : '12px 22px',
           borderBottom: '1px solid #e5edf2',
           background: '#f7f9fb',
         }}
@@ -264,26 +280,27 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', borderBottom: '1px solid #e5edf2' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit, minmax(135px, 1fr))', borderBottom: '1px solid #e5edf2' }}>
         {kpis.map((kpi, index) => (
           <div
             key={kpi.label}
             style={{
-              padding: '14px 16px',
-              borderRight: index < kpis.length - 1 ? '1px solid #e5edf2' : 'none',
+              padding: isMobile ? '12px 10px' : '14px 16px',
+              borderRight: isMobile ? (index % 2 === 0 ? '1px solid #e5edf2' : 'none') : index < kpis.length - 1 ? '1px solid #e5edf2' : 'none',
+              borderTop: isMobile && index > 1 ? '1px solid #e5edf2' : 'none',
               background: index % 2 === 0 ? '#f8faf9' : '#fbfcfe',
-              minHeight: 76,
+              minHeight: isMobile ? 70 : 76,
             }}
           >
             <div style={{ fontSize: 11, color: '#667085', marginBottom: 5, fontWeight: 700 }}>{kpi.label}</div>
-            <div style={{ fontSize: 19, fontWeight: 800, color: '#0F6B4F', lineHeight: 1.15 }}>{kpi.value}</div>
+            <div style={{ fontSize: isMobile ? 16 : 19, fontWeight: 800, color: '#0F6B4F', lineHeight: 1.15, wordBreak: 'break-word' }}>{kpi.value}</div>
             <div style={{ fontSize: 10, color: '#98a2b3', marginTop: 4 }}>{kpi.sub}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ padding: '20px 22px', display: 'grid', gap: 16, background: '#fbfcfe' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+      <div style={{ padding: isMobile ? '14px 12px' : '20px 22px', display: 'grid', gap: 16, background: '#fbfcfe' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
           <section style={reportSectionStyle}>
             <SectionHeader num="1" title="개요" />
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -302,7 +319,7 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
                         padding: '8px 10px',
                         background: '#F2F7F5',
                         fontWeight: 800,
-                        width: '30%',
+                        width: isMobile ? 92 : '30%',
                         border: '1px solid #d9e2e8',
                         color: '#111827',
                       }}
@@ -326,8 +343,8 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
                     const days = statusCounts[status] ?? 0
                     const pct = Math.round((days / maxDays) * 100)
                     return (
-                      <div key={status} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 42px', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 11, color: '#475467', fontWeight: 700 }}>{STATUS_LABEL[status]}</span>
+                      <div key={status} style={{ display: 'grid', gridTemplateColumns: isMobile ? '92px 1fr 34px' : '72px 1fr 42px', alignItems: 'center', gap: isMobile ? 7 : 10 }}>
+                        <span style={{ fontSize: isMobile ? 10 : 11, color: '#475467', fontWeight: 700 }}>{STATUS_LABEL[status]}</span>
                         <div style={{ background: '#eef2f5', borderRadius: 4, height: 12, overflow: 'hidden' }}>
                           <div
                             style={{
@@ -345,7 +362,7 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, paddingTop: 2 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 8, paddingTop: 2 }}>
                 {[
                   ['우세 상태', dominantStatus],
                   ['검증 방법', validation_results.validation_method || '-'],
@@ -366,95 +383,133 @@ function ReportDocument({ view, onClickImage }: { view: MrvReportView; onClickIm
           <SectionHeader num="3" title="결과 분석" />
 
           <p style={{ fontSize: 12, fontWeight: 800, color: '#344054', marginBottom: 7 }}>주차별 수위 변화</p>
-          <div style={{ overflowX: 'auto', marginBottom: 16, border: '1px solid #b7c7c0', borderRadius: 8 }}>
-            <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', fontSize: 11 }}>
-              <thead>
-                <tr style={{ background: '#EAF4EF' }}>
-                  {['주차', '평균(cm)', '변화(cm)', '최소(cm)', '최대(cm)', '상태 흐름'].map((header) => (
-                    <th
-                      key={header}
-                      style={{
-                        padding: '9px 8px',
-                        borderBottom: '1px solid #9bbcae',
-                        borderRight: '1px solid #b7c7c0',
-                        fontWeight: 800,
-                        color: '#111827',
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {weekly_analysis.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: 16, textAlign: 'center', color: '#98a2b3' }}>
-                      데이터 없음
-                    </td>
-                  </tr>
-                ) : (
-                  weekly_analysis.map((row, index) => (
-                    <tr key={row.week_no} style={{ background: index % 2 === 0 ? '#ffffff' : '#f8faf9' }}>
-                      <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center', fontWeight: 800 }}>
-                        {row.week_no}주
-                      </td>
-                      <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center' }}>
-                        {formatNumber(row.avg_inner_level_cm)}
-                      </td>
-                      <td
+          {isMobile ? (
+            <div style={{ display: 'grid', gap: 9, marginBottom: 16 }}>
+              {weekly_analysis.length === 0 ? (
+                <div style={{ padding: 16, textAlign: 'center', color: '#98a2b3', border: '1px solid #d9e2e8', borderRadius: 8 }}>데이터 없음</div>
+              ) : (
+                weekly_analysis.map((row) => (
+                  <div key={row.week_no} style={{ border: '1px solid #b7c7c0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 10px', background: '#EAF4EF', borderBottom: '1px solid #b7c7c0' }}>
+                      <span style={{ fontSize: 12, fontWeight: 900, color: '#111827' }}>{row.week_no}주</span>
+                      <span style={{ fontSize: 12, fontWeight: 900, color: deltaColor(row.change_inner_level_cm) }}>{formatDelta(row.change_inner_level_cm)}cm</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                      {[
+                        ['평균', formatNumber(row.avg_inner_level_cm, 'cm')],
+                        ['최소', formatNumber(row.min_inner_level_cm, 'cm')],
+                        ['최대', formatNumber(row.max_inner_level_cm, 'cm')],
+                        ['변화', `${formatDelta(row.change_inner_level_cm)}cm`],
+                      ].map(([label, value], index) => (
+                        <div key={label} style={{ padding: '8px 10px', borderTop: index > 1 ? '1px solid #e5edf2' : 'none', borderRight: index % 2 === 0 ? '1px solid #e5edf2' : 'none' }}>
+                          <div style={{ fontSize: 10, color: '#667085', fontWeight: 800, marginBottom: 3 }}>{label}</div>
+                          <div style={{ fontSize: 12, color: '#111827', fontWeight: 800 }}>{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding: '9px 10px', borderTop: '1px solid #e5edf2' }}>
+                      <div style={{ fontSize: 10, color: '#667085', fontWeight: 800, marginBottom: 4 }}>상태 흐름</div>
+                      <div style={{ fontSize: 12, color: '#344054', fontWeight: 700, lineHeight: 1.5, wordBreak: 'break-word' }}>{formatStatusFlow(row.status_flow)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto', marginBottom: 16, border: '1px solid #b7c7c0', borderRadius: 8 }}>
+              <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                  <tr style={{ background: '#EAF4EF' }}>
+                    {['주차', '평균(cm)', '변화(cm)', '최소(cm)', '최대(cm)', '상태 흐름'].map((header) => (
+                      <th
+                        key={header}
                         style={{
                           padding: '9px 8px',
-                          borderTop: '1px solid #c2cdc8',
-                          borderRight: '1px solid #c2cdc8',
-                          textAlign: 'center',
+                          borderBottom: '1px solid #9bbcae',
+                          borderRight: '1px solid #b7c7c0',
                           fontWeight: 800,
-                          color: deltaColor(row.change_inner_level_cm),
+                          color: '#111827',
+                          textAlign: 'center',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {formatDelta(row.change_inner_level_cm)}
-                      </td>
-                      <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center' }}>
-                        {formatNumber(row.min_inner_level_cm)}
-                      </td>
-                      <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center' }}>
-                        {formatNumber(row.max_inner_level_cm)}
-                      </td>
-                      <td style={{ padding: '9px 10px', borderTop: '1px solid #c2cdc8', color: '#344054', fontWeight: 600 }}>
-                        {formatStatusFlow(row.status_flow)}
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {weekly_analysis.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 16, textAlign: 'center', color: '#98a2b3' }}>
+                        데이터 없음
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    weekly_analysis.map((row, index) => (
+                      <tr key={row.week_no} style={{ background: index % 2 === 0 ? '#ffffff' : '#f8faf9' }}>
+                        <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center', fontWeight: 800 }}>
+                          {row.week_no}주
+                        </td>
+                        <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center' }}>
+                          {formatNumber(row.avg_inner_level_cm)}
+                        </td>
+                        <td
+                          style={{
+                            padding: '9px 8px',
+                            borderTop: '1px solid #c2cdc8',
+                            borderRight: '1px solid #c2cdc8',
+                            textAlign: 'center',
+                            fontWeight: 800,
+                            color: deltaColor(row.change_inner_level_cm),
+                          }}
+                        >
+                          {formatDelta(row.change_inner_level_cm)}
+                        </td>
+                        <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center' }}>
+                          {formatNumber(row.min_inner_level_cm)}
+                        </td>
+                        <td style={{ padding: '9px 8px', borderTop: '1px solid #c2cdc8', borderRight: '1px solid #c2cdc8', textAlign: 'center' }}>
+                          {formatNumber(row.max_inner_level_cm)}
+                        </td>
+                        <td style={{ padding: '9px 10px', borderTop: '1px solid #c2cdc8', color: '#344054', fontWeight: 600 }}>
+                          {formatStatusFlow(row.status_flow)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <p style={{ fontSize: 12, fontWeight: 800, color: '#344054', marginBottom: 7 }}>현장 검증 결과</p>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: representativeImages.length > 0 ? 14 : 0 }}>
-            <tbody>
-              {[
-                ['검증 샘플', `${validation_results.sample_count}건`],
-                ['센서-관찰 일치/불일치', `${validation_results.sensor_observed_match_count}건 / ${validation_results.sensor_observed_mismatch_count}건`],
-                ['센서-관찰 일치율', formatNumber(validation_results.sensor_observed_accuracy, '%')],
-                ['AI-센서 일치/불일치', `${validation_results.ai_sensor_match_count}건 / ${validation_results.ai_sensor_mismatch_count}건`],
-                ['AI-센서 일치율', formatNumber(validation_results.ai_sensor_accuracy, '%')],
-                ['비고', validation_results.note && validation_results.note !== '별도 비고 없음' ? validation_results.note : '-'],
-              ].map(([label, value]) => (
-                <tr key={label}>
-                  <td style={{ padding: '8px 10px', border: '1px solid #cfd8df', background: '#f7f9fb', width: '30%', fontWeight: 800, color: '#344054' }}>{label}</td>
-                  <td style={{ padding: '8px 10px', border: '1px solid #cfd8df', color: '#111827' }}>{value}</td>
-                </tr>
+          {isMobile ? (
+            <div style={{ display: 'grid', gap: 8, marginBottom: representativeImages.length > 0 ? 14 : 0 }}>
+              {validationRows.map(([label, value]) => (
+                <div key={label} style={{ border: '1px solid #cfd8df', borderRadius: 7, overflow: 'hidden', background: '#fff' }}>
+                  <div style={{ padding: '7px 10px', background: '#f7f9fb', color: '#344054', fontSize: 10, fontWeight: 900 }}>{label}</div>
+                  <div style={{ padding: '8px 10px', color: '#111827', fontSize: 12, fontWeight: 700, lineHeight: 1.5 }}>{value}</div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: representativeImages.length > 0 ? 14 : 0 }}>
+              <tbody>
+                {validationRows.map(([label, value]) => (
+                  <tr key={label}>
+                    <td style={{ padding: '8px 10px', border: '1px solid #cfd8df', background: '#f7f9fb', width: '30%', fontWeight: 800, color: '#344054' }}>{label}</td>
+                    <td style={{ padding: '8px 10px', border: '1px solid #cfd8df', color: '#111827' }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
           {representativeImages.length > 0 && (
             <div>
               <p style={{ fontSize: 11, color: '#667085', marginBottom: 7, fontWeight: 700 }}>대표 검증 사진</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
                 {representativeImages.map((row) => (
                   <div key={row.record_id} style={{ border: '1px solid #d9e2e8', borderRadius: 8, padding: 8, background: '#fbfcfe' }}>
                     <img
@@ -501,6 +556,7 @@ export default function MrvPage() {
   const [viewLoading, setViewLoading] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
+  const isMobile = useIsMobile()
 
   const loadReports = async (fieldId?: number) => {
     const data = await getMrvReports(fieldId)
@@ -590,16 +646,16 @@ export default function MrvPage() {
   }, [filteredReports, loading, selectedReportId])
 
   return (
-    <div style={{ padding: 16, maxWidth: 1200, margin: '0 auto', boxSizing: 'border-box' }}>
+    <div style={{ padding: isMobile ? 10 : 16, maxWidth: 1200, margin: '0 auto', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0, color: '#111827' }}>MRV 보고서</h2>
+          <h2 style={{ fontSize: isMobile ? 18 : 19, fontWeight: 800, margin: 0, color: '#111827' }}>MRV 보고서</h2>
           <p style={{ fontSize: 12, color: '#667085', margin: '4px 0 0' }}>탄소배출권 플랫폼 기반 구축을 위한 실측·검증·기록 보고</p>
         </div>
       </div>
 
-      <div style={{ ...cardStyle, marginBottom: 14 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, alignItems: 'end' }}>
+      <div style={{ ...cardStyle, marginBottom: 14, padding: isMobile ? 12 : cardStyle.padding }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, alignItems: 'end' }}>
           <label>
             <span style={labelStyle}>대상 논</span>
             <select
@@ -636,6 +692,7 @@ export default function MrvPage() {
               fontWeight: 800,
               opacity: creating ? 0.7 : 1,
               minHeight: 36,
+              width: isMobile ? '100%' : 'auto',
             }}
           >
             {creating ? '생성 중...' : '보고서 생성'}
@@ -655,12 +712,23 @@ export default function MrvPage() {
       ) : (
         <div>
           {filteredReports.length > 1 && (
-            <div style={{ ...cardStyle, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: 12 }}>
+            <div
+              style={{
+                ...cardStyle,
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: isMobile ? 'stretch' : 'center',
+                gap: 10,
+                flexWrap: 'wrap',
+                flexDirection: isMobile ? 'column' : 'row',
+                padding: 12,
+              }}
+            >
               <span style={{ fontSize: 12, color: '#667085', fontWeight: 800 }}>보고서 선택</span>
               <select
                 value={selectedReportId ?? ''}
                 onChange={(event) => setSelectedReportId(event.target.value ? Number(event.target.value) : null)}
-                style={{ ...inputStyle, width: 'auto', minWidth: 220 }}
+                style={{ ...inputStyle, width: isMobile ? '100%' : 'auto', minWidth: isMobile ? 0 : 220 }}
               >
                 {filteredReports.map((report) => (
                   <option key={report.id} value={report.id}>
@@ -668,7 +736,7 @@ export default function MrvPage() {
                   </option>
                 ))}
               </select>
-              <span style={{ fontSize: 11, color: '#98a2b3', marginLeft: 'auto', fontWeight: 700 }}>총 {filteredReports.length}건</span>
+              <span style={{ fontSize: 11, color: '#98a2b3', marginLeft: isMobile ? 0 : 'auto', fontWeight: 700 }}>총 {filteredReports.length}건</span>
             </div>
           )}
 
@@ -677,7 +745,7 @@ export default function MrvPage() {
           ) : !selectedReportView ? (
             <div style={{ ...cardStyle, textAlign: 'center', padding: 42, color: '#98a2b3', fontSize: 14 }}>보고서를 선택하세요.</div>
           ) : (
-            <ReportDocument view={selectedReportView} onClickImage={setModalImage} />
+            <ReportDocument view={selectedReportView} onClickImage={setModalImage} isMobile={isMobile} />
           )}
         </div>
       )}
