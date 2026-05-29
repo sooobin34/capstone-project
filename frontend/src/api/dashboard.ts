@@ -61,6 +61,9 @@ export interface MrvReportView {
     start_date: string
     end_date: string
     avg_inner_level_cm: number | null
+    start_inner_level_cm?: number | null
+    end_inner_level_cm?: number | null
+    change_inner_level_cm?: number | null
     min_inner_level_cm: number | null
     max_inner_level_cm: number | null
     status_flow: string
@@ -148,19 +151,17 @@ export const getDashboard = async () => {
   return (res.data as any).data
 }
 
-export const mapWaterStatus = (status: string): '과담수' | '담수' | '건조중' | '건조' | '데이터 없음' => {
-  const statusMap: Record<string, '과담수' | '담수' | '건조중' | '건조' | '데이터 없음'> = {
-    OVERFLOODED: '과담수',
-    FLOODED: '담수',
-    DRYING: '건조중',
-    DRY: '건조',
-    NO_DATA: '데이터 없음',
+export const mapWaterStatus = (status: string): 'OVERFLOODED' | 'FLOODED' | 'DRYING' | 'DRY' | 'NO_DATA' => {
+  const statusMap: Record<string, 'OVERFLOODED' | 'FLOODED' | 'DRYING' | 'DRY' | 'NO_DATA'> = {
+    OVERFLOODED: 'OVERFLOODED',
+    FLOODED: 'FLOODED',
+    DRYING: 'DRYING',
+    DRY: 'DRY',
+    NO_DATA: 'NO_DATA',
   }
-  return statusMap[status] ?? '데이터 없음'
+  return statusMap[status] ?? 'NO_DATA'
 }
 
-// 아래는 4.29 추가한 api
-// dashboard.ts 에 추가
 export const getDailySummaries = async (nodeId?: number) => {
   const url = nodeId ? `/daily-summaries?node_id=${nodeId}` : '/daily-summaries'
   const res = await api.get(url)
@@ -169,7 +170,7 @@ export const getDailySummaries = async (nodeId?: number) => {
 
 export const getSensorLogsRange = async (nodeId: number, period: '1h' | '1d' | '1w' | '1m') => {
   const res = await api.get(`/sensor-logs/node/${nodeId}/range?period=${period}`)
-  return (res.data as any).data.logs  // ← .data 에서 .data.logs 로 변경
+  return (res.data as any).data.logs
 }
 
 export const getSensorStats = async (nodeId: number) => {
@@ -189,7 +190,6 @@ export const downloadMrvExcel = (reportId: number) =>
   `https://capstone-project-54l6.onrender.com/mrv-reports/${reportId}/download/excel`
 
 
-//4.29 createMrvReport 함수 추가
 export const createMrvReport = async (fieldId: number, reportMonth: string) => {
   const res = await api.post('/mrv-reports', {
     field_id: fieldId,
@@ -198,7 +198,6 @@ export const createMrvReport = async (fieldId: number, reportMonth: string) => {
   return (res.data as any).data
 }
 
-//validation API 함수(validation records)
 export const uploadValidationRecord = async (formData: FormData) => {
   const res = await api.post('/validations/upload', formData)
   return (res.data as any).data
