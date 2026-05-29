@@ -35,7 +35,6 @@ router = APIRouter(prefix="/mrv-reports", tags=["MRV Reports"])
 
 ALLOWED_MRV_STATUSES = {"IN_PROGRESS", "COMPLETED"}
 
-# PDF 스타일 상수
 COVER_TITLE_SIZE = 20
 COVER_SUBTITLE_SIZE = 15
 COVER_INFO_SIZE = 10
@@ -49,7 +48,7 @@ PARAGRAPH_GAP = 9
 SECTION_GAP = 18
 LEFT_X = 45
 RIGHT_MARGIN = 45
-TOP_Y = 756  # A4 height(약 841) - 85: 본문을 위쪽 여백에서 충분히 내림
+TOP_Y = 756
 BOTTOM_Y = 55
 
 
@@ -58,10 +57,6 @@ def _font_path(filename: str) -> str:
 
 
 def register_korean_fonts() -> tuple[str, str]:
-    """
-    일반 본문 폰트와 Bold 폰트를 함께 등록한다.
-    Render 서버에서는 Windows 폰트가 없으므로 app/fonts 폴더의 Nanum 폰트를 우선 사용한다.
-    """
     regular_candidates = [
         _font_path("NanumMyeongjo.ttf"),
         _font_path("NanumGothic.ttf"),
@@ -120,7 +115,6 @@ def format_report_month(report_month: str) -> str:
 
 
 def select_representative_validation_rows(rows: list[ValidationRecord]) -> list[tuple[str, ValidationRecord]]:
-    """월 초/중/후 대표 검증 row를 반환한다."""
     valid_rows = [row for row in rows if row.image_url]
     if not valid_rows:
         return []
@@ -275,7 +269,7 @@ def get_dominant_status(status_counts: dict) -> str:
 def make_weekly_summary_text(week_no: int, summaries: list[AwdDailySummary]) -> list[str]:
     if not summaries:
         return [
-            f"■ {week_no}주차",
+            f"{week_no}주차",
             "해당 주차에는 수집된 데이터가 없어 수위 변화 분석이 제한됩니다.",
         ]
 
@@ -285,7 +279,7 @@ def make_weekly_summary_text(week_no: int, summaries: list[AwdDailySummary]) -> 
 
     if not statuses or not avg_values:
         return [
-            f"■ {week_no}주차",
+            f"{week_no}주차",
             "해당 주차에는 상태 또는 평균 수위 데이터가 부족하여 수위 변화 분석이 제한됩니다.",
         ]
 
@@ -297,7 +291,7 @@ def make_weekly_summary_text(week_no: int, summaries: list[AwdDailySummary]) -> 
     end_status = statuses[-1]
 
     lines = [
-        f"■ {week_no}주차",
+        f"{week_no}주차",
         f"시작 평균 수위: {start_avg:.2f}cm / 최저: {min_avg:.2f}cm / 최고: {max_avg:.2f}cm / 마지막: {end_avg:.2f}cm",
         f"상태 변화: {get_status_flow(ordered)}",
     ]
@@ -310,24 +304,20 @@ def make_weekly_summary_text(week_no: int, summaries: list[AwdDailySummary]) -> 
         lines.append(f"{week_no}주차에는 평균 내부 수위가 {start_avg:.2f}cm 수준에서 큰 변화 없이 유지되었다.")
 
     if "OVERFLOODED" in statuses:
-        lines.append("일부 구간에서 OVERFLOODED 상태가 발생하여 과다 담수 상태가 확인되었다.")
+        lines.append("일부 구간에서 OVERFLOODED 상태가 확인되었다.")
     elif "DRY" in statuses:
-        lines.append("DRY 상태가 관측되어 완전 건조 상태에 도달한 구간이 확인되었다.")
+        lines.append("DRY 상태가 관측된 구간이 확인되었다.")
     elif "DRYING" in statuses:
-        lines.append("DRYING 상태가 관측되었으며, 건조 진행 단계로 해석된다.")
+        lines.append("DRYING 상태가 관측되었다.")
 
     lines.append(f"해당 주차는 {start_status} 상태에서 시작하여 {end_status} 상태로 마무리되었다.")
     return lines
 
 
-# ---------------------------
-# PDF 그리기 유틸
-# ---------------------------
 
 def draw_page_frame(pdf, width, height):
     pdf.setStrokeColor(colors.lightgrey)
     pdf.setLineWidth(0.3)
-    # HWP 느낌의 모서리 표시
     pdf.line(35, height - 35, 55, height - 35)
     pdf.line(35, height - 35, 35, height - 55)
     pdf.line(width - 35, height - 35, width - 55, height - 35)
@@ -336,7 +326,6 @@ def draw_page_frame(pdf, width, height):
 
 
 def draw_page_number(pdf, width, page_no: int, regular_font: str):
-    """각 페이지 하단 중앙에 쪽수를 표시한다."""
     pdf.setFont(regular_font, 9)
     pdf.setFillColor(colors.black)
     pdf.drawCentredString(width / 2, 28, str(page_no))
@@ -381,7 +370,7 @@ def draw_text(pdf, text: str, x: int, y: int, max_width: int, font_name: str, fo
 def draw_bullets(pdf, lines: list[str], x: int, y: int, max_width: int, font_name: str, font_size: int = BODY_SIZE) -> int:
     pdf.setFont(font_name, font_size)
     for line in lines:
-        y = draw_text(pdf, f"• {line}", x, y, max_width, font_name, font_size, BODY_LINE_HEIGHT)
+        y = draw_text(pdf, f"- {line}", x, y, max_width, font_name, font_size, BODY_LINE_HEIGHT)
     return y
 
 
@@ -412,7 +401,6 @@ def draw_simple_table(pdf, x: int, y: int, headers: list[str], rows: list[list[s
     row_height = 22
     table_width = sum(col_widths)
 
-    # header background
     pdf.setFillColor(colors.HexColor("#E9EEF4"))
     pdf.rect(x, y - row_height + 5, table_width, row_height, fill=True, stroke=False)
     pdf.setFillColor(colors.black)
@@ -448,6 +436,70 @@ def draw_simple_table(pdf, x: int, y: int, headers: list[str], rows: list[list[s
         y -= row_height
 
     return y - 12
+
+
+def collapse_status_flow(summaries: list) -> str:
+    ordered = sorted(summaries, key=lambda s: s.record_date)
+    statuses = [s.daily_status for s in ordered if s.daily_status]
+    collapsed: list[str] = []
+    for s in statuses:
+        if not collapsed or collapsed[-1] != s:
+            collapsed.append(s)
+    return " → ".join(collapsed) if collapsed else "데이터 없음"
+
+
+def calc_level_change(summaries: list) -> float | None:
+    ordered = sorted(summaries, key=lambda s: s.record_date)
+    values = [float(s.avg_inner_level) for s in ordered if s.avg_inner_level is not None]
+    if len(values) < 2:
+        return None
+    return round(values[-1] - values[0], 2)
+
+
+def build_weekly_table_rows(weekly_dict: dict) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for week_no in sorted(weekly_dict.keys()):
+        items = weekly_dict.get(week_no, [])
+        if not items:
+            continue
+        ordered = sorted(items, key=lambda s: s.record_date)
+        values = [float(s.avg_inner_level) for s in ordered if s.avg_inner_level is not None]
+        if not values:
+            continue
+        change = calc_level_change(ordered)
+        rows.append([
+            f"{week_no}주",
+            f"{sum(values) / len(values):.2f}",
+            f"{change:+.2f}" if change is not None else "-",
+            f"{min(values):.2f}",
+            f"{max(values):.2f}",
+            _flow_text(collapse_status_flow(ordered)),
+        ])
+    return rows
+
+
+def draw_status_bar_chart(pdf, x: int, y: int, status_counts: dict, regular_font: str, bold_font: str) -> int:
+    statuses = ["OVERFLOODED", "FLOODED", "DRYING", "DRY"]
+    counts = [status_counts.get(s, 0) for s in statuses]
+    max_days = max(counts) if counts and max(counts) > 0 else 1
+    label_w = 110
+    bar_max_w = 280
+    row_h = 22
+    for status, days in zip(statuses, counts):
+        pdf.setFont(regular_font, BODY_SIZE)
+        pdf.setFillColor(colors.black)
+        pdf.drawString(x, y - 10, status)
+        pdf.setFillColor(colors.HexColor("#EAEFF4"))
+        pdf.roundRect(x + label_w, y - 14, bar_max_w, 12, 3, fill=True, stroke=False)
+        bar_w = bar_max_w * days / max_days
+        if bar_w > 0:
+            pdf.setFillColor(colors.HexColor("#5B7C99"))
+            pdf.roundRect(x + label_w, y - 14, bar_w, 12, 3, fill=True, stroke=False)
+        pdf.setFillColor(colors.black)
+        pdf.setFont(bold_font, BODY_SIZE)
+        pdf.drawString(x + label_w + bar_max_w + 10, y - 11, f"{days}일")
+        y -= row_h
+    return y - 6
 
 
 def ensure_space_for_validation(
@@ -492,11 +544,6 @@ def validation_result_text(value):
 
 
 def get_sensor_ai_status_for_validation(row: ValidationRecord, db: Session):
-    """
-    검증 사진 촬영 시점 기준으로 센서 수위(cm)를 LOW/MID/HIGH 구간으로 변환한다.
-    1순위: captured_at 기준 근접 sensor_log
-    2순위: daily_summary.avg_inner_level
-    """
     if row.node_id is None:
         return None
 
@@ -567,9 +614,6 @@ def validation_status_text(row: ValidationRecord, db: Session) -> str:
     )
 
 
-# ---------------------------
-# API
-# ---------------------------
 
 @router.post("")
 def create_mrv_report(payload: MrvReportCreate, db: Session = Depends(get_db)):
@@ -712,16 +756,22 @@ def get_mrv_report_view(report_id: int, db: Session = Depends(get_db)):
         if not week_items:
             continue
 
-        values = [float(item.avg_inner_level) for item in week_items if item.avg_inner_level is not None]
+        ordered_week_items = sorted(week_items, key=lambda item: item.record_date)
+        values = [float(item.avg_inner_level) for item in ordered_week_items if item.avg_inner_level is not None]
+        start_level = values[0] if values else None
+        end_level = values[-1] if values else None
         weekly_analysis.append(
             {
                 "week_no": week_no,
-                "start_date": week_items[0].record_date.isoformat(),
-                "end_date": week_items[-1].record_date.isoformat(),
+                "start_date": ordered_week_items[0].record_date.isoformat(),
+                "end_date": ordered_week_items[-1].record_date.isoformat(),
                 "avg_inner_level_cm": round(sum(values) / len(values), 2) if values else None,
+                "start_inner_level_cm": round(start_level, 2) if start_level is not None else None,
+                "end_inner_level_cm": round(end_level, 2) if end_level is not None else None,
+                "change_inner_level_cm": calc_level_change(ordered_week_items),
                 "min_inner_level_cm": round(min(values), 2) if values else None,
                 "max_inner_level_cm": round(max(values), 2) if values else None,
-                "status_flow": get_status_flow(week_items),
+                "status_flow": collapse_status_flow(ordered_week_items),
             }
         )
 
@@ -744,15 +794,24 @@ def get_mrv_report_view(report_id: int, db: Session = Depends(get_db)):
         for row in validation_rows
     ]
 
+    base_conclusion = [
+        "본 보고서는 탄소배출권 거래를 최종 목표로 하는 단계적 연구의 초기 설계 단계 결과로, "
+        "수위 실측·현장 검증·기록 및 보고 문서화를 통해 MRV 기반 체계를 구축하는 데 중점을 두었다.",
+        "핵심 성과는 IoT 수위 실측, 현장 사진 검증, 기록 데이터, 보고 문서화를 하나의 MRV 흐름으로 연결한 점이다.",
+    ]
     if report.total_awd_cycles == 0:
-        conclusion = [
-            "No complete AWD cycle was observed in this period.",
-            "Consider extending monitoring duration or increasing dry-down intervals for clearer AWD transitions.",
+        conclusion = base_conclusion + [
+            "보고 기간 중 완결된 AWD 사이클은 관측되지 않았으나, 센서 실측과 현장 검증을 통해 "
+            "탄소배출권 산정의 근거가 되는 MRV 데이터를 확보하였다.",
+            "본 연구는 탄소배출권 플랫폼 기반 구축에 해당하며, 향후 모니터링 기간 확대와 제도 연계를 통해 "
+            "배출권 거래 단계까지 확장하고자 한다.",
         ]
     else:
-        conclusion = [
-            f"{report.total_awd_cycles} AWD cycles were detected during the reporting period.",
-            f"Estimated carbon reduction is {report.carbon_reduction} kgCO2-eq.",
+        conclusion = base_conclusion + [
+            f"보고 기간 중 {report.total_awd_cycles}회의 AWD 사이클이 관측되었으며, "
+            f"추정 탄소 감축량은 약 {report.carbon_reduction} kgCO2-eq이다.",
+            "이는 탄소배출권 산정을 위한 근거 데이터로서, 본 연구는 탄소배출권 플랫폼 기반 구축에 해당한다. "
+            "향후 제도 연계 및 거래 단계까지 확장을 목표로 한다.",
         ]
 
     payload = {
@@ -801,8 +860,780 @@ def get_mrv_report_view(report_id: int, db: Session = Depends(get_db)):
     return success_response(payload, "MRV report view data retrieved successfully.")
 
 
+def _mrv_view_data(report_id: int, db: Session) -> dict:
+    return get_mrv_report_view(report_id, db)["data"]
+
+
+def _fmt_value(value, suffix: str = "") -> str:
+    if value is None:
+        return "-"
+    if isinstance(value, float):
+        return f"{value:.2f}{suffix}"
+    return f"{value}{suffix}"
+
+
+def _status_label(status: str | None) -> str:
+    labels = {
+        "OVERFLOODED": "OVERFLOODED",
+        "FLOODED": "FLOODED",
+        "DRYING": "DRYING",
+        "DRY": "DRY",
+        "NO_DATA": "NO_DATA",
+    }
+    return labels.get(status or "", status or "-")
+
+
+def _status_color(status: str | None) -> str:
+    return "#1D9E75"
+
+
+def _match_label(value) -> str:
+    if value is True:
+        return "일치"
+    if value is False:
+        return "불일치"
+    return "판정 불가"
+
+
+def _flow_text(value: str | None) -> str:
+    if not value:
+        return "-"
+    normalized = value.replace("->", "→").replace(" ??", "→").replace("??", "→")
+    parts = [part.strip() for part in normalized.split("→") if part.strip()]
+    if not parts:
+        return "-"
+    return " → ".join(parts)
+
+
+def _draw_pdf_header(pdf, width: int, height: int, title: str, regular_font: str, bold_font: str):
+    pdf.setFillColor(colors.white)
+    pdf.rect(0, height - 58, width, 58, fill=True, stroke=False)
+    pdf.setStrokeColor(colors.HexColor("#D9E2E8"))
+    pdf.setLineWidth(0.6)
+    pdf.line(42, height - 54, width - 42, height - 54)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 13)
+    pdf.drawString(42, height - 34, title)
+    pdf.setStrokeColor(colors.HexColor("#0F6B4F"))
+    pdf.setLineWidth(1.1)
+    pdf.line(42, height - 58, 118, height - 58)
+    pdf.setFillColor(colors.HexColor("#667085"))
+    pdf.setFont(regular_font, 9)
+    pdf.drawRightString(width - 42, height - 34, "AquaPaddy MRV")
+
+
+def _start_pdf_body_page(pdf, width: int, height: int) -> int:
+    draw_page_frame(pdf, width, height)
+    return height - 82
+
+
+def _draw_pdf_footer(pdf, width: int, page_no: int, regular_font: str):
+    pdf.setStrokeColor(colors.HexColor("#D9E2E8"))
+    pdf.setLineWidth(0.5)
+    pdf.line(42, 42, width - 42, 42)
+    pdf.setFillColor(colors.HexColor("#667085"))
+    pdf.setFont(regular_font, 8)
+    pdf.drawString(42, 28, "IoT water-level monitoring based MRV summary")
+    pdf.drawRightString(width - 42, 28, f"page {page_no}")
+
+
+def _draw_pdf_section_label(pdf, x: int, y: int, label: str, bold_font: str) -> int:
+    pdf.setFillColor(colors.HexColor("#1F2937"))
+    pdf.setFont(bold_font, 12)
+    pdf.drawString(x, y - 14, label)
+    pdf.setStrokeColor(colors.HexColor("#0F6B4F"))
+    pdf.setLineWidth(0.9)
+    pdf.line(x, y - 22, x + 120, y - 22)
+    return y - 34
+
+
+def _draw_pdf_card(pdf, x: int, y: int, w: int, h: int, title: str, value: str, regular_font: str, bold_font: str):
+    pdf.setFillColor(colors.white)
+    pdf.setStrokeColor(colors.HexColor("#D9E2E8"))
+    pdf.rect(x, y - h, w, h, fill=True, stroke=True)
+    pdf.setFillColor(colors.HexColor("#0F6B4F"))
+    pdf.rect(x, y - 3, w, 3, fill=True, stroke=False)
+    pdf.setFillColor(colors.HexColor("#667085"))
+    pdf.setFont(regular_font, 8)
+    pdf.drawString(x + 10, y - 18, title)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 14)
+    pdf.drawString(x + 10, y - 39, value)
+
+
+def _draw_pdf_wrapped_text(pdf, text: str, x: int, y: int, max_width: int, regular_font: str, size: int = 9) -> int:
+    pdf.setFillColor(colors.HexColor("#111827"))
+    for line in wrap_text(pdf, text, max_width, regular_font, size):
+        pdf.setFont(regular_font, size)
+        pdf.drawString(x, y, line)
+        y -= size + 5
+    return y
+
+
+def _draw_pdf_overview_table(pdf, x: int, y: int, rows: list[tuple[str, str]], width: int,
+                              regular_font: str, bold_font: str) -> int:
+    label_w = 100
+    value_w = int(width - x * 2) - label_w
+    row_h = 20
+    for label, value in rows:
+        pdf.setFillColor(colors.HexColor("#EAF4EF"))
+        pdf.rect(x, y - row_h + 4, label_w, row_h, fill=True, stroke=False)
+        pdf.setFillColor(colors.HexColor("#FFFFFF"))
+        pdf.rect(x + label_w, y - row_h + 4, value_w, row_h, fill=True, stroke=False)
+        pdf.setStrokeColor(colors.HexColor("#D9E2E8"))
+        pdf.setLineWidth(0.4)
+        pdf.rect(x, y - row_h + 4, label_w + value_w, row_h, fill=False, stroke=True)
+        pdf.line(x + label_w, y - row_h + 4, x + label_w, y + 4)
+        pdf.setFillColor(colors.HexColor("#1F2937"))
+        pdf.setFont(bold_font, 9)
+        pdf.drawString(x + 6, y - 9, label)
+        pdf.setFont(regular_font, 9)
+        pdf.drawString(x + label_w + 6, y - 9, str(value))
+        y -= row_h
+    return y - 8
+
+
+def _draw_visual_pdf_cover(pdf, width: int, height: int, overview: dict, regular_font: str, bold_font: str):
+    pdf.setFillColor(colors.white)
+    pdf.rect(0, 0, width, height, fill=True, stroke=False)
+    draw_page_frame(pdf, width, height)
+
+    pdf.setStrokeColor(colors.HexColor("#0F6B4F"))
+    pdf.setLineWidth(1.2)
+    pdf.line(75, height - 125, width - 75, height - 125)
+    pdf.setLineWidth(0.6)
+    pdf.setStrokeColor(colors.HexColor("#B8C7C1"))
+    pdf.line(75, height - 132, width - 75, height - 132)
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 21)
+    pdf.drawCentredString(width / 2, height - 92, "AquaPaddy MRV 보고서")
+    pdf.setFont(regular_font, 10)
+    pdf.setFillColor(colors.HexColor("#344054"))
+    pdf.drawCentredString(width / 2, height - 112, "IoT Water-Level Monitoring and Field Verification")
+
+    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "logo.png"))
+    if os.path.exists(logo_path):
+        try:
+            pdf.drawImage(
+                logo_path,
+                width / 2 - 58,
+                height - 320,
+                width=116,
+                height=116,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
+        except Exception:
+            pass
+
+    report_month = overview.get("report_month") or "-"
+    generated_at = overview.get("generated_at") or "-"
+    generated_date = generated_at.split("T")[0] if isinstance(generated_at, str) else "-"
+    field_name = overview.get("field_name") or "-"
+    period = f"{overview.get('period_start', '-')} ~ {overview.get('period_end_exclusive', '-')}"
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 16)
+    pdf.drawCentredString(width / 2, height - 395, field_name)
+    pdf.setFont(regular_font, 12)
+    pdf.drawCentredString(width / 2, height - 422, f"{report_month} / MRV 기반 구축 보고서")
+
+    box_x = 90
+    box_y = height - 575
+    box_w = width - 180
+    box_h = 98
+    pdf.setFillColor(colors.white)
+    pdf.setStrokeColor(colors.HexColor("#D9E2E8"))
+    pdf.rect(box_x, box_y, box_w, box_h, fill=True, stroke=True)
+    pdf.setFont(regular_font, 10)
+    pdf.setFillColor(colors.HexColor("#344054"))
+    cover_rows = [
+        ("연구 범위", "탄소배출권 거래 전 단계의 MRV 기반 구축"),
+        ("분석 기간", period),
+        ("작성일", generated_date),
+        ("팀명", "강안장인"),
+    ]
+    row_y = box_y + box_h - 24
+    for label, value in cover_rows:
+        pdf.setFont(bold_font, 9)
+        pdf.drawString(box_x + 22, row_y, label)
+        pdf.setFont(regular_font, 9)
+        pdf.drawString(box_x + 95, row_y, value)
+        row_y -= 20
+
+    pdf.setFillColor(colors.HexColor("#667085"))
+    pdf.setFont(regular_font, 9)
+    pdf.drawCentredString(width / 2, 142, "본 문서는 배출권 거래 결과물이 아닌 MRV 기반 구축 산출물입니다.")
+
+    draw_page_number(pdf, width, 1, regular_font)
+
+
+def _draw_visual_pdf_toc(pdf, width: int, height: int, regular_font: str, bold_font: str):
+    draw_page_frame(pdf, width, height)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 18)
+    pdf.drawCentredString(width / 2, height - 72, "목차")
+    pdf.setFont(regular_font, 9)
+    pdf.setFillColor(colors.HexColor("#667085"))
+    pdf.drawCentredString(width / 2, height - 94, "Table of Contents")
+
+    toc_items = [
+        ("1. 개요", "3", 0),
+        ("2. 주요 내용 (결과 요약)", "3", 0),
+        ("3. 결과 분석", "4", 0),
+        ("3.1 주차별 수위 변화", "4", 1),
+        ("3.2 현장 검증 결과", "4", 1),
+        ("4. 결론", "5", 0),
+    ]
+
+    y = height - 155
+    for title, page_no, indent in toc_items:
+        x = LEFT_X + indent * 18
+        pdf.setFillColor(colors.HexColor("#111827"))
+        pdf.setFont(bold_font if indent == 0 else regular_font, 11 if indent == 0 else 10)
+        pdf.drawString(x, y, title)
+        text_width = pdf.stringWidth(title, bold_font if indent == 0 else regular_font, 11 if indent == 0 else 10)
+        page_width = pdf.stringWidth(page_no, regular_font, 10)
+        dot_start = x + text_width + 10
+        dot_end = width - RIGHT_MARGIN - page_width - 10
+        pdf.setStrokeColor(colors.HexColor("#B8C7C1"))
+        pdf.setDash(1, 3)
+        pdf.line(dot_start, y + 3, dot_end, y + 3)
+        pdf.setDash()
+        pdf.setFillColor(colors.HexColor("#111827"))
+        pdf.setFont(regular_font, 10)
+        pdf.drawRightString(width - RIGHT_MARGIN, y, page_no)
+        y -= 30 if indent == 0 else 24
+
+    pdf.setStrokeColor(colors.HexColor("#D9E2E8"))
+    pdf.rect(LEFT_X, 120, int(width - LEFT_X - RIGHT_MARGIN), 54, fill=False, stroke=True)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 10)
+    pdf.drawString(LEFT_X + 16, 152, "보고서 작성 기준")
+    pdf.setFont(regular_font, 9)
+    pdf.setFillColor(colors.HexColor("#344054"))
+    pdf.drawString(LEFT_X + 16, 134, "본 보고서는 배출권 거래 결과물이 아니라 MRV 기반 구축 산출물입니다.")
+
+    draw_page_number(pdf, width, 2, regular_font)
+
+
+def _draw_visual_mrv_pdf(report_id: int, db: Session):
+    view = _mrv_view_data(report_id, db)
+    overview = view["overview"]
+    summary = view["summary"]
+    validation = view["validation_results"]
+    weekly_rows = view["weekly_analysis"]
+
+    regular_font, bold_font = register_korean_fonts()
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    page_no = 1
+
+    pdf.setTitle(f"AquaPaddy_MRV_Report_{report_id}")
+
+    _draw_visual_pdf_cover(pdf, width, height, overview, regular_font, bold_font)
+    pdf.showPage()
+    page_no += 1
+
+    _draw_visual_pdf_toc(pdf, width, height, regular_font, bold_font)
+    pdf.showPage()
+    page_no += 1
+
+    y = _start_pdf_body_page(pdf, width, height)
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 16)
+    pdf.drawString(42, y, overview["field_name"])
+    pdf.setFont(regular_font, 9)
+    pdf.setFillColor(colors.HexColor("#667085"))
+    pdf.drawString(42, y - 16,
+                   f"분석기간: {overview['period_start']} ~ {overview['period_end_exclusive']}  |  보고월: {overview['report_month']}")
+    pdf.setFillColor(colors.HexColor("#F7F9FB"))
+    pdf.rect(42, y - 44, int(width - 84), 20, fill=True, stroke=False)
+    pdf.setStrokeColor(colors.HexColor("#E5E7EB"))
+    pdf.rect(42, y - 44, int(width - 84), 20, fill=False, stroke=True)
+    pdf.setFillColor(colors.HexColor("#344054"))
+    pdf.setFont(bold_font, 8)
+    pdf.drawString(54, y - 38, "연구 포지션: 탄소배출권 거래 전 단계의 플랫폼 기반 구축")
+    y -= 66
+
+    card_w = 118
+    gap = 9
+    kpis = [
+        ("AWD 사이클", _fmt_value(summary["total_awd_cycles"], "회")),
+        ("Flood days",    _fmt_value(summary["flood_days"], "일")),
+        ("월 평균 수위", _fmt_value(summary["month_avg_inner_level_cm"], "cm")),
+        ("탄소감축량",  _fmt_value(summary["carbon_reduction_kgco2eq"], " kgCO2-eq")),
+    ]
+    for i, (label, value) in enumerate(kpis):
+        _draw_pdf_card(pdf, 42 + i * (card_w + gap), y, card_w, 56, label, value, regular_font, bold_font)
+    y -= 76
+
+    y = _draw_pdf_section_label(pdf, 42, y, "1. 개요", bold_font)
+    loc = overview.get("field_location_desc") or "-"
+    status_kor = "완료" if overview.get("status") == "COMPLETED" else "진행 중"
+    overview_rows = [
+        ("대상지", overview["field_name"]),
+        ("위치", loc),
+        ("분석기간", f"{overview['period_start']} ~ {overview['period_end_exclusive']}"),
+        ("IoT 노드", f"{overview['node_count']}개"),
+        ("보고 상태", status_kor),
+    ]
+    y = _draw_pdf_overview_table(pdf, 42, y, overview_rows, int(width), regular_font, bold_font)
+
+    y = _draw_pdf_section_label(pdf, 42, y, "2. 주요 내용 (결과 요약)", bold_font)
+    status_counts = summary["status_counts"]
+    max_days = max(status_counts.values()) if status_counts else 1
+    bar_total_w = 260
+    for idx, status in enumerate(["OVERFLOODED", "FLOODED", "DRYING", "DRY"]):
+        days = status_counts.get(status, 0)
+        row_y = y - idx * 22
+        pdf.setFillColor(colors.HexColor("#374151"))
+        pdf.setFont(regular_font, 9)
+        pdf.drawString(42, row_y - 1, _status_label(status))
+        bar_w = int(bar_total_w * days / max_days) if max_days else 0
+        pdf.setFillColor(colors.HexColor("#DDEFE8"))
+        pdf.roundRect(42 + 72, row_y - 6, bar_total_w, 12, 4, fill=True, stroke=False)
+        if bar_w > 0:
+            pdf.setFillColor(colors.HexColor("#1D9E75"))
+            pdf.roundRect(42 + 72, row_y - 6, bar_w, 12, 4, fill=True, stroke=False)
+        pdf.setFillColor(colors.HexColor("#111827"))
+        pdf.setFont(bold_font, 9)
+        pdf.drawString(42 + 72 + bar_total_w + 8, row_y - 2, f"{days}일")
+    y -= 110
+
+    _draw_pdf_footer(pdf, width, page_no, regular_font)
+    pdf.showPage()
+    page_no += 1
+
+    y = _start_pdf_body_page(pdf, width, height)
+
+    y = _draw_pdf_section_label(pdf, 42, y, "3. 결과 분석", bold_font)
+
+    pdf.setFillColor(colors.HexColor("#444444"))
+    pdf.setFont(bold_font, 10)
+    pdf.drawString(42, y, "주차별 수위 변화")
+    y -= 20
+
+    w_headers = ["주차", "평균(cm)", "변화(cm)", "최소(cm)", "최대(cm)", "상태 흐름"]
+    w_cols = [42, 62, 58, 58, 58, 212]
+    row_h = 20
+    table_x = 42
+    table_w = sum(w_cols)
+
+    pdf.setFillColor(colors.HexColor("#EAF4EF"))
+    pdf.rect(table_x, y - row_h + 4, table_w, row_h, fill=True, stroke=False)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(bold_font, 8)
+    cx = table_x
+    for idx, h in enumerate(w_headers):
+        pdf.drawString(cx + 4, y - 10, h)
+        cx += w_cols[idx]
+    pdf.setStrokeColor(colors.HexColor("#9BBCAE"))
+    pdf.setLineWidth(0.6)
+    pdf.rect(table_x, y - row_h + 4, table_w, row_h, fill=False, stroke=True)
+    cx = table_x
+    for col_w in w_cols[:-1]:
+        cx += col_w
+        pdf.line(cx, y + 4, cx, y - row_h + 4)
+    y -= row_h
+
+    pdf.setFont(regular_font, 8)
+    for row_idx, row in enumerate(weekly_rows[:7]):
+        flow_raw = row.get("status_flow") or "-"
+        flow_safe = _flow_text(flow_raw).replace("→", "->")
+        flow_lines = wrap_text(pdf, flow_safe, w_cols[5] - 8, regular_font, 8) or ["-"]
+        current_row_h = max(row_h, 12 + len(flow_lines) * 10)
+        if y - current_row_h < 70:
+            _draw_pdf_footer(pdf, width, page_no, regular_font)
+            pdf.showPage()
+            page_no += 1
+            y = _start_pdf_body_page(pdf, width, height)
+        change = row.get("change_inner_level_cm")
+        values = [
+            f"{row['week_no']}주",
+            _fmt_value(row["avg_inner_level_cm"]),
+            f"{change:+.2f}" if change is not None else "-",
+            _fmt_value(row["min_inner_level_cm"]),
+            _fmt_value(row["max_inner_level_cm"]),
+        ]
+        if row_idx % 2 == 1:
+            pdf.setFillColor(colors.HexColor("#F8FAFC"))
+            pdf.rect(table_x, y - current_row_h + 4, table_w, current_row_h, fill=True, stroke=False)
+        pdf.setFillColor(colors.HexColor("#111827"))
+        cx = table_x
+        for idx, val in enumerate(values):
+            text = str(val)
+            pdf.drawString(cx + 4, y - 10, text)
+            cx += w_cols[idx]
+        flow_x = table_x + sum(w_cols[:5]) + 4
+        flow_y = y - 10
+        for line in flow_lines:
+            pdf.drawString(flow_x, flow_y, line)
+            flow_y -= 10
+        pdf.setStrokeColor(colors.HexColor("#C2CDC8"))
+        pdf.setLineWidth(0.45)
+        pdf.rect(table_x, y - current_row_h + 4, table_w, current_row_h, fill=False, stroke=True)
+        cx = table_x
+        for col_w in w_cols[:-1]:
+            cx += col_w
+            pdf.line(cx, y + 4, cx, y - current_row_h + 4)
+        y -= current_row_h
+
+    y -= 16
+
+    pdf.setFillColor(colors.HexColor("#444444"))
+    pdf.setFont(bold_font, 10)
+    pdf.drawString(42, y, "현장 검증 결과")
+    y -= 20
+
+    v_kpis = [
+        ("검증 샘플",      _fmt_value(validation["sample_count"], "건")),
+        ("센서-관찰 일치율", _fmt_value(validation["sensor_observed_accuracy"], "%")),
+        ("AI-센서 일치율",  _fmt_value(validation["ai_sensor_accuracy"], "%")),
+        ("AI-센서 불일치",  _fmt_value(validation["ai_sensor_mismatch_count"], "건")),
+    ]
+    v_card_w = 118
+    for i, (label, value) in enumerate(v_kpis):
+        _draw_pdf_card(pdf, 42 + i * (v_card_w + gap), y, v_card_w, 52, label, value, regular_font, bold_font)
+    y -= 68
+
+    validation_note = validation.get("note") or ""
+    if validation_note and validation_note != "별도 비고 없음":
+        y = _draw_pdf_wrapped_text(pdf, f"메모: {validation_note}", 42, y, int(width - 84), regular_font, 9) - 10
+
+    rep_rows = [r for r in validation.get("rows", []) if r.get("image_url")][:3]
+    if rep_rows:
+        pdf.setFont(regular_font, 8)
+        pdf.setFillColor(colors.HexColor("#667085"))
+        pdf.drawString(42, y, f"대표 검증 사진 ({len(rep_rows)}건)")
+        y -= 14
+        img_w = 150
+        img_h = 112
+        for i, row in enumerate(rep_rows):
+            img_reader = load_image_reader(row["image_url"])
+            img_x = 42 + i * (img_w + 8)
+            if img_reader:
+                try:
+                    pdf.drawImage(img_reader, img_x, y - img_h, width=img_w, height=img_h,
+                                  preserveAspectRatio=True, mask="auto")
+                except Exception:
+                    pdf.setFillColor(colors.HexColor("#F3F4F6"))
+                    pdf.rect(img_x, y - img_h, img_w, img_h, fill=True, stroke=False)
+            else:
+                pdf.setFillColor(colors.HexColor("#F3F4F6"))
+                pdf.rect(img_x, y - img_h, img_w, img_h, fill=True, stroke=False)
+            pdf.setFont(regular_font, 7)
+            pdf.setFillColor(colors.HexColor("#374151"))
+            match_text = _match_label(row.get("ai_sensor_match"))
+            pdf.drawString(img_x, y - img_h - 12, f"{row['record_date']}  AI-센서: {match_text}")
+        y -= img_h + 22
+
+    _draw_pdf_footer(pdf, width, page_no, regular_font)
+    pdf.showPage()
+    page_no += 1
+
+    y = _start_pdf_body_page(pdf, width, height)
+
+    y = _draw_pdf_section_label(pdf, 42, y, "4. 결론", bold_font)
+
+    conclusion_lines = view.get("conclusion", [])
+    wrapped_line_count = sum(
+        max(1, len(wrap_text(pdf, line, int(width - 112), regular_font, 10)))
+        for line in conclusion_lines
+    )
+    box_h = 20 + wrapped_line_count * 15 + max(0, len(conclusion_lines) - 1) * 4
+    pdf.setFillColor(colors.HexColor("#EAF4EF"))
+    pdf.setStrokeColor(colors.HexColor("#B2DAC9"))
+    pdf.setLineWidth(0.6)
+    pdf.roundRect(42, y - box_h, int(width - 84), box_h, 6, fill=True, stroke=True)
+    cy = y - 14
+    for line in conclusion_lines:
+        y_after = _draw_pdf_wrapped_text(pdf, line, 56, cy, int(width - 112), regular_font, 10)
+        cy = y_after - 2
+    y = y - box_h - 18
+
+    summary_table_rows = [
+        ("AWD 사이클",  _fmt_value(summary["total_awd_cycles"], "회")),
+        ("Flood days",    _fmt_value(summary["flood_days"], "일")),
+        ("월 평균 수위", _fmt_value(summary["month_avg_inner_level_cm"], "cm")),
+        ("탄소감축량",  _fmt_value(summary["carbon_reduction_kgco2eq"], " kgCO2-eq")),
+        ("검증 샘플",   _fmt_value(validation["sample_count"], "건")),
+        ("AI-센서 일치율", _fmt_value(validation["ai_sensor_accuracy"], "%")),
+    ]
+    y = _draw_pdf_wrapped_text(pdf, "주요 수치 요약", 42, y, int(width - 84), bold_font, 10) - 8
+    y = _draw_pdf_overview_table(pdf, 42, y, summary_table_rows, int(width), regular_font, bold_font)
+
+    _draw_pdf_footer(pdf, width, page_no, regular_font)
+    pdf.save()
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="mrv_report_{report_id}.pdf"'},
+    )
+
+
+def _style_excel_cells(sheet, cell_range: str, fill=None, font=None, alignment=None, border=None):
+    for row in sheet[cell_range]:
+        for cell in row:
+            if fill:
+                cell.fill = fill
+            if font:
+                cell.font = font
+            if alignment:
+                cell.alignment = alignment
+            if border:
+                cell.border = border
+
+
+def _draw_visual_mrv_excel(report_id: int, db: Session):
+    view = _mrv_view_data(report_id, db)
+    overview = view["overview"]
+    summary = view["summary"]
+    validation = view["validation_results"]
+
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+
+    title_font = XLFont(name="Malgun Gothic", size=18, bold=True, color="FFFFFF")
+    subtitle_font = XLFont(name="Malgun Gothic", size=11, bold=True, color="0F6B4F")
+    section_font = XLFont(name="Malgun Gothic", size=12, bold=True, color="111827")
+    header_font = XLFont(name="Malgun Gothic", size=10, bold=True, color="111827")
+    body_font = XLFont(name="Malgun Gothic", size=10, color="111827")
+    muted_font = XLFont(name="Malgun Gothic", size=9, color="667085")
+    white_fill = PatternFill("solid", fgColor="FFFFFF")
+    green_fill = PatternFill("solid", fgColor="0F6B4F")
+    light_green_fill = PatternFill("solid", fgColor="EAF4EF")
+    light_blue_fill = PatternFill("solid", fgColor="EAF3FF")
+    gray_fill = PatternFill("solid", fgColor="F7F9FB")
+    border = Border(
+        left=Side(style="thin", color="D9E2E8"),
+        right=Side(style="thin", color="D9E2E8"),
+        top=Side(style="thin", color="D9E2E8"),
+        bottom=Side(style="thin", color="D9E2E8"),
+    )
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    report_sheet = workbook.create_sheet("MRV Report")
+    report_sheet.sheet_view.showGridLines = False
+    for col, width in {"A": 4, "B": 18, "C": 18, "D": 18, "E": 18, "F": 18, "G": 18, "H": 18}.items():
+        report_sheet.column_dimensions[col].width = width
+
+    report_sheet.merge_cells("A1:H2")
+    report_sheet["A1"] = "MRV 보고서"
+    report_sheet["A1"].font = title_font
+    report_sheet["A1"].fill = green_fill
+    report_sheet["A1"].alignment = left
+    _style_excel_cells(report_sheet, "A1:H2", fill=green_fill, font=title_font, alignment=left)
+
+    report_sheet.merge_cells("A3:H3")
+    report_sheet["A3"] = f"{overview['field_name']} · {overview['period_start']} ~ {overview['period_end_exclusive']}"
+    report_sheet["A3"].font = subtitle_font
+    report_sheet["A3"].alignment = left
+
+    kpis = [
+        ("AWD 사이클", _fmt_value(summary["total_awd_cycles"], "회")),
+        ("Flood days", _fmt_value(summary["flood_days"], "일")),
+        ("월 평균 수위", _fmt_value(summary["month_avg_inner_level_cm"], "cm")),
+        ("탄소감축량", _fmt_value(summary["carbon_reduction_kgco2eq"], " kgCO2-eq")),
+    ]
+    row = 5
+    for idx, (label, value) in enumerate(kpis):
+        start_col = 1 + idx * 2
+        end_col = start_col + 1
+        report_sheet.merge_cells(start_row=row, start_column=start_col, end_row=row, end_column=end_col)
+        report_sheet.merge_cells(start_row=row + 1, start_column=start_col, end_row=row + 2, end_column=end_col)
+        label_cell = report_sheet.cell(row=row, column=start_col, value=label)
+        value_cell = report_sheet.cell(row=row + 1, column=start_col, value=value)
+        _style_excel_cells(
+            report_sheet,
+            f"{get_column_letter(start_col)}{row}:{get_column_letter(end_col)}{row + 2}",
+            fill=gray_fill,
+            border=border,
+            alignment=center,
+        )
+        label_cell.font = muted_font
+        value_cell.font = XLFont(name="Malgun Gothic", size=16, bold=True, color="111827")
+        value_cell.alignment = center
+
+    row = 9
+    report_sheet.merge_cells(f"A{row}:H{row}")
+    report_sheet[f"A{row}"] = "1. 개요"
+    _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=light_green_fill, font=section_font, alignment=left, border=border)
+    row += 1
+    overview_rows = [
+        ("대상지", overview["field_name"]),
+        ("위치", overview.get("field_location_desc") or "-"),
+        ("분석기간", f"{overview['period_start']} ~ {overview['period_end_exclusive']}"),
+        ("노드 수", _fmt_value(overview["node_count"], "개")),
+        ("보고 상태", "완료" if overview["status"] == "COMPLETED" else "진행 중"),
+    ]
+    for label, value in overview_rows:
+        report_sheet.merge_cells(f"A{row}:B{row}")
+        report_sheet.merge_cells(f"C{row}:H{row}")
+        report_sheet[f"A{row}"] = label
+        report_sheet[f"C{row}"] = value
+        _style_excel_cells(report_sheet, f"A{row}:B{row}", fill=light_blue_fill, font=header_font, alignment=center, border=border)
+        _style_excel_cells(report_sheet, f"C{row}:H{row}", fill=white_fill, font=body_font, alignment=left, border=border)
+        row += 1
+
+    row += 1
+    report_sheet.merge_cells(f"A{row}:H{row}")
+    report_sheet[f"A{row}"] = "2. 주요 내용"
+    _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=light_green_fill, font=section_font, alignment=left, border=border)
+    row += 1
+    report_sheet.append(["상태", "일수", "", "", "검증 항목", "값", "", ""])
+    _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=light_blue_fill, font=header_font, alignment=center, border=border)
+    row += 1
+    status_counts = summary["status_counts"]
+    validation_metrics = [
+        ("검증 샘플", _fmt_value(validation["sample_count"], "건")),
+        ("센서-관찰 일치율", _fmt_value(validation["sensor_observed_accuracy"], "%")),
+        ("AI-센서 일치율", _fmt_value(validation["ai_sensor_accuracy"], "%")),
+        ("AI-센서 불일치", _fmt_value(validation["ai_sensor_mismatch_count"], "건")),
+    ]
+    for idx, status in enumerate(["OVERFLOODED", "FLOODED", "DRYING", "DRY"]):
+        metric_label, metric_value = validation_metrics[idx]
+        values = [_status_label(status), status_counts.get(status, 0), "", "", metric_label, metric_value, "", ""]
+        for col_idx, value in enumerate(values, start=1):
+            cell = report_sheet.cell(row=row, column=col_idx, value=value)
+            cell.font = body_font
+            cell.alignment = center if col_idx in (1, 2, 5, 6) else left
+            cell.border = border
+        row += 1
+
+    row += 1
+    report_sheet.merge_cells(f"A{row}:H{row}")
+    report_sheet[f"A{row}"] = "3. 결과 분석"
+    _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=light_green_fill, font=section_font, alignment=left, border=border)
+    row += 1
+    weekly_main_headers = ["주차", "평균 수위(cm)", "변화(cm)", "최소(cm)", "최대(cm)", "상태 흐름", "", ""]
+    for col_idx, value in enumerate(weekly_main_headers, start=1):
+        cell = report_sheet.cell(row=row, column=col_idx, value=value)
+        cell.font = header_font
+        cell.fill = light_blue_fill
+        cell.alignment = center
+        cell.border = border
+    row += 1
+    if view["weekly_analysis"]:
+        for row_data in view["weekly_analysis"]:
+            change = row_data.get("change_inner_level_cm")
+            values = [
+                f"{row_data['week_no']}주",
+                row_data["avg_inner_level_cm"],
+                f"{change:+.2f}" if change is not None else "-",
+                row_data["min_inner_level_cm"],
+                row_data["max_inner_level_cm"],
+                _flow_text(row_data["status_flow"]),
+                "",
+                "",
+            ]
+            for col_idx, value in enumerate(values, start=1):
+                cell = report_sheet.cell(row=row, column=col_idx, value=value)
+                cell.font = body_font
+                cell.fill = white_fill
+                cell.alignment = left if col_idx == 6 else center
+                cell.border = border
+            row += 1
+    else:
+        report_sheet.merge_cells(f"A{row}:H{row}")
+        report_sheet[f"A{row}"] = "주차별 수위 데이터 없음"
+        _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=white_fill, font=body_font, alignment=center, border=border)
+        row += 1
+
+    report_sheet.merge_cells(f"A{row}:H{row}")
+    report_sheet[f"A{row}"] = (
+        f"현장 검증 결과: 검증 샘플 {_fmt_value(validation['sample_count'], '건')}, "
+        f"센서-관찰 일치율 {_fmt_value(validation['sensor_observed_accuracy'], '%')}, "
+        f"AI-센서 일치율 {_fmt_value(validation['ai_sensor_accuracy'], '%')}"
+    )
+    _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=gray_fill, font=body_font, alignment=left, border=border)
+
+    row += 2
+    report_sheet.merge_cells(f"A{row}:H{row}")
+    report_sheet[f"A{row}"] = "4. 결론"
+    _style_excel_cells(report_sheet, f"A{row}:H{row}", fill=light_green_fill, font=section_font, alignment=left, border=border)
+    row += 1
+    report_sheet.merge_cells(f"A{row}:H{row + 3}")
+    report_sheet[f"A{row}"] = "\n".join(view["conclusion"])
+    _style_excel_cells(report_sheet, f"A{row}:H{row + 3}", fill=white_fill, font=body_font, alignment=left, border=border)
+    report_sheet.row_dimensions[row].height = 78
+
+    weekly_sheet = workbook.create_sheet("Weekly Analysis")
+    weekly_sheet.sheet_view.showGridLines = False
+    weekly_headers = ["주차", "평균 수위(cm)", "변화(cm)", "최소 수위(cm)", "최대 수위(cm)", "상태 흐름"]
+    weekly_sheet.append(weekly_headers)
+    _style_excel_cells(weekly_sheet, "A1:F1", fill=green_fill, font=XLFont(name="Malgun Gothic", size=10, bold=True, color="FFFFFF"), alignment=center, border=border)
+    for row_data in view["weekly_analysis"]:
+        change = row_data.get("change_inner_level_cm")
+        weekly_sheet.append([
+            f"{row_data['week_no']}주",
+            row_data["avg_inner_level_cm"],
+            f"{change:+.2f}" if change is not None else "-",
+            row_data["min_inner_level_cm"],
+            row_data["max_inner_level_cm"],
+            _flow_text(row_data["status_flow"]),
+        ])
+    for row_cells in weekly_sheet.iter_rows(min_row=2, max_row=weekly_sheet.max_row, min_col=1, max_col=6):
+        for cell in row_cells:
+            cell.font = body_font
+            cell.alignment = left if cell.column == 6 else center
+            cell.border = border
+    for col, width in {"A": 10, "B": 16, "C": 14, "D": 16, "E": 16, "F": 70}.items():
+        weekly_sheet.column_dimensions[col].width = width
+
+    validation_sheet = workbook.create_sheet("Validation")
+    validation_sheet.sheet_view.showGridLines = False
+    validation_headers = ["일자", "노드", "관찰 상태", "센서 상태", "AI 상태", "AI 신뢰도", "센서-관찰", "AI-센서", "이미지 URL", "메모"]
+    validation_sheet.append(validation_headers)
+    _style_excel_cells(validation_sheet, "A1:J1", fill=green_fill, font=XLFont(name="Malgun Gothic", size=10, bold=True, color="FFFFFF"), alignment=center, border=border)
+    if validation["rows"]:
+        for row_data in validation["rows"]:
+            validation_sheet.append([
+                row_data["record_date"],
+                row_data["node_id"],
+                row_data["observed_surface_status"],
+                row_data["sensor_predicted_status"],
+                row_data["ai_predicted_status"],
+                row_data["ai_confidence"],
+                _match_label(row_data["sensor_observed_match"]),
+                _match_label(row_data["ai_sensor_match"]),
+                row_data["image_url"],
+                row_data["note"],
+            ])
+    else:
+        validation_sheet.append(["검증 데이터 없음", "", "", "", "", "", "", "", "", ""])
+    for row_cells in validation_sheet.iter_rows(min_row=2, max_row=validation_sheet.max_row, min_col=1, max_col=10):
+        for cell in row_cells:
+            cell.font = body_font
+            cell.alignment = left if cell.column in (9, 10) else center
+            cell.border = border
+    for col, width in {"A": 14, "B": 10, "C": 16, "D": 16, "E": 14, "F": 12, "G": 14, "H": 14, "I": 50, "J": 32}.items():
+        validation_sheet.column_dimensions[col].width = width
+
+    for sheet in workbook.worksheets:
+        sheet.freeze_panes = "A2"
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="mrv_report_{report_id}_visual.xlsx"'},
+    )
+
+
 @router.get("/{report_id}/download/pdf")
 def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
+    return _draw_visual_mrv_pdf(report_id, db)
+
     report = db.query(MrvReport).filter(MrvReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="해당 report_id가 존재하지 않습니다.")
@@ -844,7 +1675,6 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.setTitle(f"mrv_report_{report.id}")
     page_no_ref = [1]
 
-    # 표지
     draw_page_frame(pdf, width, height)
 
     pdf.setFont(bold_font, COVER_TITLE_SIZE)
@@ -882,23 +1712,16 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
     page_no_ref[0] += 1
 
-    # 목차
     pdf.setFont(bold_font, TOC_TITLE_SIZE)
     pdf.drawCentredString(width / 2, height - 55, "목차")
 
     toc_items = [
-        ("1. 개요 (배경)", "3", 0),
-        ("2. 분석 대상 및 기간", "3", 0),
-        ("3. 결과 요약", "3", 0),
-        ("4. 결과 분석", "4", 0),
-        ("4.1 주차별 수위 변화 분석", "4", 1),
-        ("4.2 월간 수위 상태 분석", "4", 1),
-        ("5. AWD 수행 및 탄소 감축 분석", "5", 0),
-        ("6. 검증 결과", "6", 0),
-        ("6.1 현장 검증 결과", "6", 1),
-        ("6.2 대표 검증 이미지 출력", "6", 1),
-        ("7. 향후 계획", "7", 0),
-        ("8. 결론", "7", 0),
+        ("1. 개요", "3", 0),
+        ("2. 주요 내용 (결과 요약)", "3", 0),
+        ("3. 결과 분석", "4", 0),
+        ("3.1 주차별 수위 변화", "4", 1),
+        ("3.2 현장 검증 결과", "4", 1),
+        ("4. 결론", "5", 0),
     ]
 
     y = height - 125
@@ -919,227 +1742,154 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
     pdf.showPage()
     page_no_ref[0] += 1
 
-    # Page 1: 1~3
     y = TOP_Y
 
-    y = draw_section_title(pdf, "1. 개요 (배경)", y, regular_font, bold_font)
+    y = draw_section_title(pdf, "1. 개요", y, regular_font, bold_font)
     y = draw_text(
         pdf,
-        f"이 보고서는 {field.field_name}을 대상으로 {report_month_kor} 동안 수행된 AWD(Alternate Wetting and Drying) 물관리 이력을 분석한 MRV 보고서이다.\n"
-        "이 시스템은 IoT 센서를 활용하여 논의 수위 데이터를 자동으로 수집하고, 이를 기반으로 일 단위 상태를 분석하여 물관리 수행 여부를 기록하도록 설계되었다.",
+        f"본 보고서는 {field.field_name}을 대상으로 {report_month_kor} 동안 수행된 "
+        "AWD(Alternate Wetting and Drying) 물관리 이력을 IoT 센서 기반으로 분석한 MRV 보고서이다.",
         LEFT_X, y, max_text_width, regular_font, BODY_SIZE, BODY_LINE_HEIGHT,
     )
-    y -= PARAGRAPH_GAP
-    y = draw_text(pdf, "수위 상태는 내부 수위를 기준으로 다음과 같이 구분된다.", LEFT_X, y, max_text_width, regular_font)
-    y = draw_bullets(
-        pdf,
-        [
-            "OVERFLOODED: 과다 담수 상태",
-            "FLOODED: 적정 담수 상태",
-            "DRYING: 건조 진행 상태",
-            "DRY: 재관개 필요 상태",
-        ],
-        LEFT_X + 8, y, max_text_width - 8, regular_font,
-    )
-    y -= PARAGRAPH_GAP
-    y = draw_text(pdf, "각 날짜별 상태는 하루 동안 수집된 센서 데이터의 평균 수위를 기준으로 대표 상태로 정의된다.", LEFT_X, y, max_text_width, regular_font)
-
-    y = draw_divider(pdf, y - 4, width)
-
-    y = draw_section_title(pdf, "2. 분석 대상 및 기간", y, regular_font, bold_font)
+    y -= 4
     y = draw_simple_table(
         pdf, LEFT_X, y,
         ["항목", "내용"],
         [
-            ["대상 논", field.field_name],
+            ["대상지", field.field_name],
+            ["위치", field.location_desc or "-"],
             ["분석 기간", report_month_kor],
             ["사용 노드 수", f"{len(nodes)}개"],
             ["보고서 생성일", created_text],
         ],
         [150, 300], regular_font, bold_font,
     )
+    y = draw_text(pdf, "수위 상태는 내부 수위를 기준으로 다음과 같이 구분된다.", LEFT_X, y, max_text_width, regular_font)
+    y = draw_bullets(
+        pdf,
+        [
+            "OVERFLOODED",
+            "FLOODED",
+            "DRYING",
+            "DRY: 재관개 필요 상태",
+        ],
+        LEFT_X + 8, y, max_text_width - 8, regular_font,
+    )
 
-    y = draw_divider(pdf, y + 2, width)
+    y = draw_divider(pdf, y - 4, width)
 
-    y = draw_section_title(pdf, "3. 결과 요약", y, regular_font, bold_font)
-    y = draw_text(pdf, "분석 기간 동안의 일일 상태를 집계한 결과는 다음과 같다.", LEFT_X, y, max_text_width, regular_font)
-    y -= 4
+    y = draw_section_title(pdf, "2. 주요 내용 (결과 요약)", y, regular_font, bold_font)
     y = draw_simple_table(
         pdf, LEFT_X, y,
-        ["상태", "일수"],
-        [
-            ["OVERFLOODED", f"{status_counts['OVERFLOODED']}일"],
-            ["FLOODED", f"{status_counts['FLOODED']}일"],
-            ["DRYING", f"{status_counts['DRYING']}일"],
-            ["DRY", f"{status_counts['DRY']}일"],
-        ],
-        [200, 150], regular_font, bold_font,
+        ["AWD 사이클", "Flood days", "월 평균 수위", "탄소 감축량"],
+        [[
+            f"{report.total_awd_cycles}회",
+            f"{report.flood_days}일",
+            f"{month_avg:.2f}cm" if month_avg is not None else "-",
+            f"{report.carbon_reduction} kgCO2-eq",
+        ]],
+        [110, 100, 130, 150], regular_font, bold_font,
     )
+    y -= 4
+    y = draw_sub_title(pdf, "상태 분포 (일수)", y, bold_font)
+    y = draw_status_bar_chart(pdf, LEFT_X, y, status_counts, regular_font, bold_font)
+    y -= 6
     y = draw_text(
         pdf,
-        f"전체적으로 {dominant_status} 상태가 가장 많이 관측되었으며, 논의 수위는 해당 상태를 중심으로 변화하였다. "
-        f"AWD 수행 기준은 DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의하며, 해당 기간 동안 AWD 수행 횟수는 {report.total_awd_cycles}회로 나타났다.",
+        f"분석 기간 동안 {dominant_status} 상태가 가장 많이 관측되었으며, AWD 수행 횟수는 {report.total_awd_cycles}회로 나타났다. "
+        f"탄소 감축량은 AWD 수행 횟수 × 15.25(kgCO2-eq) 기준으로 {report.carbon_reduction} kgCO2-eq로 산정되었다. "
+        "(센서 기반 수위 데이터 분석에 따른 추정값)",
         LEFT_X, y, max_text_width, regular_font,
     )
     draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
     page_no_ref[0] += 1
 
-    # Page 2: 4
     y = TOP_Y
-    y = draw_section_title(pdf, "4. 결과 분석", y, regular_font, bold_font)
-    y = draw_sub_title(pdf, "4.1 주차별 수위 변화 분석", y, bold_font)
+    y = draw_section_title(pdf, "3. 결과 분석", y, regular_font, bold_font)
 
-    for week_no in range(1, 5):
-        week_lines = make_weekly_summary_text(week_no, weekly_dict.get(week_no, []))
-        for idx, line in enumerate(week_lines):
-            if idx == 0:
-                pdf.setFont(bold_font, BODY_SIZE)
-                pdf.drawString(LEFT_X, y, line)
-                y -= BODY_LINE_HEIGHT
-            else:
-                y = draw_text(pdf, line, LEFT_X + 8, y, max_text_width - 8, regular_font, BODY_SIZE, BODY_LINE_HEIGHT)
-        y -= 8
-
-    y = draw_sub_title(pdf, "4.2 월간 수위 상태 분석", y, bold_font)
-    if month_avg is not None:
-        monthly_text = (
-            f"분석 기간 동안 평균 내부 수위는 {month_avg:.2f}cm로 나타났다. "
-            f"이는 전체적으로 수위가 변화하는 경향을 의미하며, 주요 상태는 {dominant_status}으로 확인된다. "
-            "전체적으로 건조 진행 상태와 담수 상태가 교차하며 나타났고, 일부 구간에서는 과다 담수 상태가 발생하는 등 수위 변동이 존재하였다. "
-            "그러나 건조 이후 재관개가 충분히 이루어지지 않은 경우에는 AWD 사이클이 제한적으로 형성될 수 있다."
+    y = draw_sub_title(pdf, "3.1 주차별 수위 변화", y, bold_font)
+    weekly_rows = build_weekly_table_rows(weekly_dict)
+    if weekly_rows:
+        y = draw_simple_table(
+            pdf, LEFT_X, y,
+            ["주차", "평균", "변화", "최소", "최대", "상태 흐름"],
+            weekly_rows,
+            [40, 60, 60, 55, 55, 220], regular_font, bold_font,
         )
-    else:
-        monthly_text = "분석 기간 동안 평균 내부 수위 데이터가 없어 월간 수위 상태 분석이 제한된다."
-    y = draw_text(pdf, monthly_text, LEFT_X, y, max_text_width, regular_font, BODY_SIZE, BODY_LINE_HEIGHT)
-    draw_page_number(pdf, width, page_no_ref[0], regular_font)
-    pdf.showPage()
-    page_no_ref[0] += 1
-
-    # Page 3: 5
-    y = TOP_Y
-    y = draw_section_title(pdf, "5. AWD 수행 및 탄소 감축 분석", y, regular_font, bold_font)
-
-    y = draw_sub_title(pdf, "[AWD 수행 횟수 기준]", y, bold_font)
-    y = draw_text(pdf, "논이 DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의한다.", LEFT_X, y, max_text_width, regular_font)
-    y = draw_bullets(pdf, [f"{report_month_kor} AWD 수행 횟수: {report.total_awd_cycles}회"], LEFT_X + 8, y - 4, max_text_width, regular_font)
-    y -= 14
-
-    y = draw_sub_title(pdf, "[탄소 감축량 계산]", y, bold_font)
-    y = draw_text(pdf, f"이에 따라 {report_month_kor} 탄소 감축량은 AWD 수행 횟수를 기준으로 다음과 같이 산출된다.", LEFT_X, y, max_text_width, regular_font)
-    y = draw_bullets(
-        pdf,
-        [
-            "탄소 감축량 = AWD 수행 횟수 × 15.25 (kgCO2-eq)",
-            f"결과: {report.carbon_reduction} kgCO2-eq",
-        ],
-        LEFT_X + 8, y - 4, max_text_width, regular_font,
-    )
-    y = draw_text(pdf, "(본 결과는 센서 기반 수위 데이터 분석에 따른 추정값임)", LEFT_X, y - 4, max_text_width, regular_font)
-    y -= 14
-
-    y = draw_sub_title(pdf, "[시사점]", y, bold_font)
-    if report.total_awd_cycles == 0:
-        insight_text = (
-            "건조 단계 이후 재관개가 이루어지지 않아 AWD 사이클이 형성되지 않았다.\n"
-            "이는 물관리 전략이 건조 단계 중심으로 운영되었음을 의미한다.\n"
-            "향후 AWD 수행을 위해서는 DRY 상태 이후 적절한 시점에서의 계획적 재관개가 필요하다."
-        )
-    else:
-        insight_text = (
-            f"분석 기간 동안 AWD 사이클이 {report.total_awd_cycles}회 확인되었다.\n"
-            "이는 건조 이후 재관개가 수행되어 AWD 물관리 흐름이 일부 형성되었음을 의미한다.\n"
-            "향후에는 주기적인 검증 데이터 확보를 통해 AWD 수행 결과의 신뢰성을 높일 필요가 있다."
-        )
-    y = draw_text(pdf, insight_text, LEFT_X, y, max_text_width, regular_font)
-    draw_page_number(pdf, width, page_no_ref[0], regular_font)
-    pdf.showPage()
-    page_no_ref[0] += 1
-
-    # Page 4+: 6 검증 결과. 사진이 길면 자동 페이지 넘김.
-    y = TOP_Y
-    y = draw_section_title(pdf, "6. 검증 결과", y, regular_font, bold_font)
-    y = draw_sub_title(pdf, "6.1 현장 검증 결과", y, bold_font)
-
-    if validation["validation_sample_count"] > 0:
+        weekly_avgs = [float(r[1]) for r in weekly_rows]
         y = draw_text(
             pdf,
-            "분석 기간 동안 수집된 현장 검증 데이터와 센서 기반 상태를 비교하여 검증 결과를 산정하였다.",
+            f"주차별 평균 내부 수위는 {min(weekly_avgs):.2f}cm ~ {max(weekly_avgs):.2f}cm 범위에서 변동하였으며, "
+            f"분석 기간 전반에 걸쳐 {dominant_status} 상태가 우세하게 나타났다.",
             LEFT_X, y, max_text_width, regular_font,
         )
-        y -= 4
+    else:
+        y = draw_text(pdf, "주차별 수위 데이터가 부족하여 상세 분석이 제한된다.", LEFT_X, y, max_text_width, regular_font)
+
+    y -= 12
+
+    y = draw_sub_title(pdf, "3.2 현장 검증 결과", y, bold_font)
+    if validation["validation_sample_count"] > 0:
         y = draw_simple_table(
             pdf, LEFT_X, y,
             ["항목", "값"],
             [
                 ["검증 방법", validation["validation_method"]],
                 ["검증 샘플 수", f"{validation['validation_sample_count']}건"],
-                ["일치 수", f"{validation['validation_match_count']}건"],
-                ["불일치 수", f"{validation['validation_mismatch_count']}건"],
-                ["판별 불가", f"{validation['validation_unknown_count']}건"],
-                ["센서-관찰 검증 정확도", f"{validation['validation_accuracy']}%"],
-                ["AI-센서 일치 수", f"{validation['ai_sensor_match_count']}건"],
-                ["AI-센서 불일치 수", f"{validation['ai_sensor_mismatch_count']}건"],
-                ["AI-센서 판별 불가", f"{validation['ai_sensor_unknown_count']}건"],
+                ["센서-관찰 일치 / 불일치", f"{validation['validation_match_count']}건 / {validation['validation_mismatch_count']}건"],
+                ["센서-관찰 정확도", f"{validation['validation_accuracy']}%"],
+                ["AI-센서 일치 / 불일치", f"{validation['ai_sensor_match_count']}건 / {validation['ai_sensor_mismatch_count']}건"],
                 ["AI-센서 일치율", f"{validation['ai_sensor_accuracy']}%"],
             ],
-            [160, 260], regular_font, bold_font,
+            [180, 240], regular_font, bold_font,
         )
         y = draw_text(
             pdf,
             "검증 결과는 센서 기반 상태 판정의 신뢰성을 확인하기 위한 보조 자료로 활용된다. "
-            "일부 불일치 사례는 촬영 시점과 센서 측정 시점 간 차이 또는 수위 경계 구간에서의 판단 차이에 의해 발생할 수 있다. "
-            "AI-센서 일치율은 촬영 시점 기준 근접 센서 로그의 수위값을 LOW/MID/HIGH 기준으로 변환한 뒤 AI 예측 결과와 비교하여 산정하였다. "
-            "근접 센서 로그가 없는 경우 일일 요약 평균 수위값(daily_summary.avg_inner_level)을 보조 기준으로 사용하며, 비교 가능한 수위값이 없는 데이터는 정확도 산정에서 제외하였다.",
+            "AI-센서 일치율은 촬영 시점 근접 센서 로그의 수위값을 LOW/MID/HIGH 구간으로 변환한 뒤 AI 예측 결과와 비교하여 산정하였다.",
             LEFT_X, y, max_text_width, regular_font,
         )
     else:
         y = draw_text(
             pdf,
-            "해당 기간 동안 등록된 현장 검증 데이터가 없어 검증 결과 분석이 제한된다.\n"
-            "향후 검증 데이터가 추가될 경우, 센서 기반 상태와 실제 관찰 결과 간의 일치 여부를 통해 정확도 분석이 가능하다.",
+            "해당 기간 동안 등록된 현장 검증 데이터가 없어 검증 결과 분석이 제한된다.",
             LEFT_X, y, max_text_width, regular_font,
         )
-
-    y -= 18
-    y = ensure_space_for_validation(pdf, y, 300, width, height, regular_font, page_no_ref)
-    y = draw_sub_title(pdf, "6.2 대표 검증 이미지 출력", y, bold_font)
 
     representative_rows = validation["representative_rows"]
     if representative_rows:
-        y = draw_text(
-            pdf,
-            "본 보고서에서는 분석 기간을 기준으로 월 초, 월 중, 월 말 시점을 대표하는 이미지를 제시한다.",
-            LEFT_X, y, max_text_width, regular_font,
-        )
-        y -= 10
+        y -= 16
+        y = ensure_space_for_validation(pdf, y, 340, width, height, regular_font, page_no_ref)
+        y = draw_sub_title(pdf, "대표 검증 이미지 (월 초·월 중·월 말)", y, bold_font)
         card_width = 160
         card_height = 245
         gap = 12
-        start_x = LEFT_X
         card_y = y
 
         for idx, (label, row) in enumerate(representative_rows[:3]):
-            x = start_x + idx * (card_width + gap)
+            x = LEFT_X + idx * (card_width + gap)
 
             pdf.setStrokeColor(colors.lightgrey)
             pdf.setLineWidth(0.5)
             pdf.roundRect(x, card_y - card_height, card_width, card_height, 8, stroke=True, fill=False)
 
+            pdf.setFillColor(colors.black)
             pdf.setFont(bold_font, 10)
             pdf.drawString(x + 8, card_y - 18, f"{label} 대표 이미지")
 
             img = load_image_reader(row.image_url)
             if img:
                 pdf.drawImage(
-                    img,
-                    x + 8,
-                    card_y - 120,
-                    width=card_width - 16,
-                    height=90,
-                    preserveAspectRatio=True,
-                    mask="auto"
+                    img, x + 8, card_y - 120, width=card_width - 16, height=90,
+                    preserveAspectRatio=True, mask="auto",
                 )
+            else:
+                pdf.setFillColor(colors.HexColor("#F3F4F6"))
+                pdf.roundRect(x + 8, card_y - 120, card_width - 16, 90, 4, fill=True, stroke=False)
+                pdf.setFillColor(colors.HexColor("#9CA3AF"))
+                pdf.setFont(regular_font, 8)
+                pdf.drawCentredString(x + card_width / 2, card_y - 80, "이미지 없음")
 
             sensor_ai_status = get_sensor_ai_status_for_validation(row, db) or "-"
             ai_status = row.ai_predicted_status or "-"
@@ -1150,28 +1900,18 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
             info_groups = [
                 [f"촬영일: {row.record_date}"],
-                [
-                    f"사람 관찰: {observed}",
-                    f"센서 표면: {sensor_surface}",
-                ],
-                [
-                    f"센서 구간: {sensor_ai_status}",
-                    f"AI 구간: {ai_status}",
-                ],
-                [
-                    f"센서-사람: {match_text}",
-                    f"AI-센서: {ai_match_text}",
-                ],
+                [f"사람 관찰: {observed}", f"센서 표면: {sensor_surface}"],
+                [f"센서 구간: {sensor_ai_status}", f"AI 구간: {ai_status}"],
+                [f"센서-사람: {match_text}", f"AI-센서: {ai_match_text}"],
             ]
 
             text_y = card_y - 138
+            pdf.setFillColor(colors.black)
             pdf.setFont(regular_font, 8)
-
             for group_idx, group in enumerate(info_groups):
                 for line in group:
                     pdf.drawString(x + 8, text_y, line)
                     text_y -= 11
-
                 if group_idx < len(info_groups) - 1:
                     pdf.setStrokeColor(colors.lightgrey)
                     pdf.setLineWidth(0.3)
@@ -1179,34 +1919,12 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
                     text_y -= 6
 
         y = card_y - card_height - 20
-    
-    else:
-        y = draw_text(
-            pdf,
-            "해당 기간에 등록된 대표 검증 이미지가 존재하지 않는다.\n"
-            "향후 검증 이미지가 확보될 경우, 월간 대표 이미지를 통해 상태 검증 근거를 시각적으로 제공할 수 있다.",
-            LEFT_X, y, max_text_width, regular_font,
-        )
 
-    # 7~8은 검증 결과가 몇 페이지에서 끝나든 항상 새 페이지에서 시작
     draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.showPage()
     page_no_ref[0] += 1
     y = TOP_Y
-    y = draw_section_title(pdf, "7. 향후 계획", y, regular_font, bold_font)
-    y = draw_bullets(
-        pdf,
-        [
-            "AWD 사이클 확보를 위한 계획적 재관개 전략 수립",
-            "IoT 센서 기반 자동 관개 시스템 도입 검토",
-            "현장 검증 데이터(이미지) 수집 및 검증 체계 강화",
-            "MRV 보고서 자동화 및 시각화 기능 개선",
-        ],
-        LEFT_X + 8, y, max_text_width, regular_font,
-    )
-
-    y -= 28
-    y = draw_section_title(pdf, "8. 결론", y, regular_font, bold_font)
+    y = draw_section_title(pdf, "4. 결론", y, regular_font, bold_font)
     if report.total_awd_cycles == 0:
         conclusion = (
             f"본 분석 기간 동안 논은 전반적으로 {dominant_status} 상태를 중심으로 변화하였으며, AWD 수행은 발생하지 않았다. "
@@ -1222,6 +1940,19 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         )
     y = draw_text(pdf, conclusion, LEFT_X, y, max_text_width, regular_font)
 
+    y -= 14
+    y = draw_sub_title(pdf, "[향후 계획]", y, bold_font)
+    y = draw_bullets(
+        pdf,
+        [
+            "AWD 사이클 확보를 위한 계획적 재관개 전략 수립",
+            "IoT 센서 기반 자동 관개 시스템 도입 검토",
+            "현장 검증 데이터(이미지) 수집 및 검증 체계 강화",
+            "MRV 보고서 자동화 및 시각화 기능 개선",
+        ],
+        LEFT_X + 8, y, max_text_width, regular_font,
+    )
+
     draw_page_number(pdf, width, page_no_ref[0], regular_font)
     pdf.save()
     buffer.seek(0)
@@ -1236,6 +1967,8 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{report_id}/download/excel")
 def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
+    return _draw_visual_mrv_excel(report_id, db)
+
     report = db.query(MrvReport).filter(MrvReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="해당 report_id가 존재하지 않습니다.")
@@ -1270,7 +2003,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
 
     workbook = Workbook()
 
-    # 공통 Excel 스타일
     title_font = XLFont(name="맑은 고딕", size=16, bold=True)
     section_font = XLFont(name="맑은 고딕", size=12, bold=True)
     header_font = XLFont(name="맑은 고딕", size=10, bold=True)
@@ -1315,7 +2047,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
         sheet.merge_cells(value_range.format(row=row))
         key_cell = sheet[f"A{row}"]
         value_col = value_range.split("{")[0].split(":")[-1].rstrip("0123456789") or "C"
-        # value_range는 보통 C{row}:H{row} 형태이므로 시작 열을 직접 계산
         value_cell_ref = value_range.format(row=row).split(":")[0]
         value_cell = sheet[value_cell_ref]
         key_cell.value = key
@@ -1325,9 +2056,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
         sheet.row_dimensions[row].height = 22
         return row + 1
 
-    # -----------------------------
-    # 시트1: 보고서형 요약 템플릿
-    # -----------------------------
     summary_sheet = workbook.active
     summary_sheet.title = "요약"
     summary_sheet.sheet_view.showGridLines = False
@@ -1408,10 +2136,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     style_range(summary_sheet, f"A{row}:H{row + 2}", fill=note_fill, font=body_font, alignment=left)
     summary_sheet.row_dimensions[row].height = 55
 
-    # -----------------------------
-    # 시트2: 날짜별 흐름 데이터
-    # 한 달 흐름을 날짜별 1행으로 확인하기 위한 시트
-    # -----------------------------
     daily_grouped = defaultdict(list)
     for s in summaries:
         daily_grouped[s.record_date].append(s)
@@ -1422,7 +2146,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     flow_sheet = workbook.create_sheet(title="날짜별 흐름 데이터")
     flow_sheet.sheet_view.showGridLines = False
 
-    # 기본 열: 날짜, 대표 평균 수위, 대표 상태 + 노드별 수위/상태
     flow_headers = ["날짜", "대표 평균 수위(cm)", "대표 상태"]
     for node_id in node_ids:
         flow_headers.extend([f"노드 {node_id} 수위(cm)", f"노드 {node_id} 상태"])
@@ -1471,10 +2194,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
             cell.border = border
         current_row += 1
 
-    # -----------------------------
-    # 시트3: 노드별 상세 데이터
-    # daily_summary 원본 데이터를 날짜별 묶음으로 확인하기 위한 시트
-    # -----------------------------
     detail_sheet = workbook.create_sheet(title="노드별 상세 데이터")
     detail_sheet.sheet_view.showGridLines = False
     set_widths(detail_sheet, {"A": 16, "B": 12, "C": 18, "D": 18, "E": 45})
@@ -1511,7 +2230,6 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
         if group_end > group_start:
             detail_sheet.merge_cells(start_row=group_start, start_column=1, end_row=group_end, end_column=1)
 
-        # 날짜 단위 묶음이 눈에 보이도록 첫 행/마지막 행에 굵은 테두리 적용
         for row_idx in range(group_start, group_end + 1):
             for col_idx in range(1, 6):
                 cell = detail_sheet.cell(row=row_idx, column=col_idx)
@@ -1524,12 +2242,8 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
                     bottom=thick_side if row_idx == group_end else thin_side,
                 )
 
-        # 날짜별 묶음 사이 간격을 조금 더 주기 위해 행 높이 조정
         detail_sheet.row_dimensions[group_end].height = 22
 
-    # -----------------------------
-    # 시트3: 검증 상세
-    # -----------------------------
     validation_sheet = workbook.create_sheet(title="검증 상세")
     validation_sheet.sheet_view.showGridLines = False
     set_widths(validation_sheet, {
