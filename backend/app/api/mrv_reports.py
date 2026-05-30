@@ -1818,6 +1818,55 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
             [40, 60, 60, 55, 55, 220], regular_font, bold_font,
         )
         weekly_avgs = [float(r[1]) for r in weekly_rows]
+    else:
+        monthly_text = "분석 기간 동안 평균 내부 수위 데이터가 없어 월간 수위 상태 분석이 제한된다."
+    y = draw_text(pdf, monthly_text, LEFT_X, y, max_text_width, regular_font, BODY_SIZE, BODY_LINE_HEIGHT)
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
+    pdf.showPage()
+    page_no_ref[0] += 1
+
+    # Page 3: 5
+    y = TOP_Y
+    y = draw_section_title(pdf, "5. AWD 수행 분석 및 탄소감축 산정 기반", y, regular_font, bold_font)
+
+    y = draw_sub_title(pdf, "[AWD 수행 횟수 기준]", y, bold_font)
+    y = draw_text(pdf, "논이 DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의한다.", LEFT_X, y, max_text_width, regular_font)
+    y = draw_bullets(pdf, [f"{report_month_kor} AWD 수행 횟수: {report.total_awd_cycles}회"], LEFT_X + 8, y - 4, max_text_width, regular_font)
+    y -= 14
+
+    y = draw_sub_title(pdf, "[탄소감축량 산정 범위]", y, bold_font)
+    y = draw_text(
+        pdf,
+        "본 연구에서는 실제 메탄 배출량 측정 및 공식 탄소감축량 산정까지는 수행하지 않았다.\n"
+        "다만 AWD 수행 횟수, 수위 변화, 검증 결과를 기록함으로써 향후 탄소감축량 산정을 위한 기초 데이터를 확보하였다.",
+        LEFT_X, y, max_text_width, regular_font,
+    )
+    y -= 14
+
+    y = draw_sub_title(pdf, "[시사점]", y, bold_font)
+    if report.total_awd_cycles == 0:
+        insight_text = (
+            "건조 단계 이후 재관개가 이루어지지 않아 AWD 사이클이 형성되지 않았다.\n"
+            "이는 물관리 전략이 건조 단계 중심으로 운영되었음을 의미한다.\n"
+            "향후 AWD 수행을 위해서는 DRY 상태 이후 적절한 시점에서의 계획적 재관개가 필요하다."
+        )
+    else:
+        insight_text = (
+            f"분석 기간 동안 AWD 사이클이 {report.total_awd_cycles}회 확인되었다.\n"
+            "이는 건조 이후 재관개가 수행되어 AWD 물관리 흐름이 일부 형성되었음을 의미한다.\n"
+            "향후에는 주기적인 검증 데이터 확보를 통해 AWD 수행 결과의 신뢰성을 높일 필요가 있다."
+        )
+    y = draw_text(pdf, insight_text, LEFT_X, y, max_text_width, regular_font)
+    draw_page_number(pdf, width, page_no_ref[0], regular_font)
+    pdf.showPage()
+    page_no_ref[0] += 1
+
+    # Page 4+: 6 검증 결과. 사진이 길면 자동 페이지 넘김.
+    y = TOP_Y
+    y = draw_section_title(pdf, "6. 검증 결과", y, regular_font, bold_font)
+    y = draw_sub_title(pdf, "6.1 현장 검증 결과", y, bold_font)
+
+    if validation["validation_sample_count"] > 0:
         y = draw_text(
             pdf,
             f"주차별 평균 내부 수위는 {min(weekly_avgs):.2f}cm ~ {max(weekly_avgs):.2f}cm 범위에서 변동하였으며, "
@@ -1929,14 +1978,16 @@ def download_mrv_report_pdf(report_id: int, db: Session = Depends(get_db)):
         conclusion = (
             f"본 분석 기간 동안 논은 전반적으로 {dominant_status} 상태를 중심으로 변화하였으며, AWD 수행은 발생하지 않았다. "
             "이는 건조 이후 재관개가 이루어지지 않았기 때문으로 판단된다.\n"
-            "본 시스템을 통해 IoT 기반 수위 데이터 수집, 상태 분석, MRV 보고서 생성까지의 자동화 가능성을 확인할 수 있었으며, "
-            "향후 물관리 전략 개선 및 검증 데이터 확보를 통해 보다 정교한 MRV 시스템 구축이 가능할 것으로 기대된다."
+            "본 시스템을 통해 IoT 기반 수위 데이터 수집, 상태 분석, 현장 검증, MRV 보고서 생성까지의 자동화 가능성을 확인하였다. "
+            "본 보고서는 탄소배출권 거래 또는 공식 감축량 산정을 완료한 결과물이 아니라, "
+            "향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 MRV 기반 자료로 활용될 수 있다."
         )
     else:
         conclusion = (
-            f"본 분석 기간 동안 AWD 수행은 {report.total_awd_cycles}회 관측되었으며, 탄소 감축 추정량은 {report.carbon_reduction} kgCO2-eq로 산정되었다.\n"
-            "본 시스템은 IoT 센서 기반 수위 데이터 수집과 MRV 보고서 생성을 자동화할 수 있음을 확인하였으며, "
-            "향후 검증 데이터 확대를 통해 보고서 신뢰도를 높일 수 있다."
+            f"본 분석 기간 동안 AWD 수행은 {report.total_awd_cycles}회 관측되었으며, "
+            "수위 데이터 수집·상태 분석·현장 검증·보고서 생성 과정을 자동화하였다.\n"
+            "본 보고서는 탄소배출권 거래 또는 공식 감축량 산정을 완료한 결과물이 아니라, "
+            "향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 MRV 기반 자료로 활용될 수 있다."
         )
     y = draw_text(pdf, conclusion, LEFT_X, y, max_text_width, regular_font)
 
@@ -2104,12 +2155,11 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
         row += 1
 
     row += 1
-    row = put_section_title(summary_sheet, row, "3. AWD 수행 및 탄소 감축 분석")
-    row = put_kv(summary_sheet, row, "AWD 수행 기준", "DRY 상태 이후 FLOODED 상태로 전환되는 경우를 1회로 정의", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_section_title(summary_sheet, row, "3. AWD 수행 분석 및 탄소감축 산정 기반")
+    row = put_kv(summary_sheet, row, "AWD 수행 기준", "DRY 상태 이후 DRYING, FLOODED 또는 OVERFLOODED 상태로 전환되는 경우를 1회로 정의", "A{row}:B{row}", "C{row}:H{row}")
     row = put_kv(summary_sheet, row, "AWD 수행 횟수", f"{report.total_awd_cycles}회", "A{row}:B{row}", "C{row}:H{row}")
-    row = put_kv(summary_sheet, row, "탄소 감축 산식", "AWD 수행 횟수 × 15.25 (kgCO2-eq)", "A{row}:B{row}", "C{row}:H{row}")
-    row = put_kv(summary_sheet, row, "탄소 감축량", f"{report.carbon_reduction} kgCO2-eq", "A{row}:B{row}", "C{row}:H{row}")
-
+    row = put_kv(summary_sheet, row, "탄소감축량 산정", "향후 적용 필요", "A{row}:B{row}", "C{row}:H{row}")
+    row = put_kv(summary_sheet, row, "탄소감축량", "미산정", "A{row}:B{row}", "C{row}:H{row}")
     row += 1
     row = put_section_title(summary_sheet, row, "4. 검증 결과")
     row = put_kv(summary_sheet, row, "검증 방법", validation["validation_method"], "A{row}:B{row}", "C{row}:H{row}")
@@ -2125,12 +2175,17 @@ def download_mrv_report_excel(report_id: int, db: Session = Depends(get_db)):
     row = put_section_title(summary_sheet, row, "5. 결론 및 향후 계획")
     conclusion = (
         f"분석 기간 동안 주요 상태는 {dominant_status}로 확인되었으며, "
-        f"AWD 수행 횟수는 {report.total_awd_cycles}회, 탄소 감축량은 {report.carbon_reduction} kgCO2-eq로 산정되었다."
+        f"AWD 수행 횟수는 {report.total_awd_cycles}회로 집계되었다. "
+        "공식 탄소감축량 산정은 향후 과제이며, "
+        "본 보고서는 MRV 기반 데이터 관리 결과를 제시한다."
     )
     if report.total_awd_cycles == 0:
         plan = "향후 DRY 상태 이후 적절한 시점의 계획적 재관개와 현장 검증 데이터 확보가 필요하다."
     else:
-        plan = "향후 검증 데이터 확대와 주기적 수위 관리 기준 보완을 통해 MRV 신뢰도를 높일 필요가 있다."
+        plan = (
+            "향후 장기 실증 데이터 확보, 탄소감축량 산정 모델 적용, "
+            "탄소배출권 제도 연계를 통해 MRV 활용 범위를 확장할 필요가 있다."
+        )
     summary_sheet.merge_cells(f"A{row}:H{row + 2}")
     summary_sheet[f"A{row}"] = f"{conclusion}\n{plan}"
     style_range(summary_sheet, f"A{row}:H{row + 2}", fill=note_fill, font=body_font, alignment=left)
