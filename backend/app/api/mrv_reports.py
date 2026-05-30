@@ -809,9 +809,9 @@ def get_mrv_report_view(report_id: int, db: Session = Depends(get_db)):
     else:
         conclusion = base_conclusion + [
             f"보고 기간 중 {report.total_awd_cycles}회의 AWD 사이클이 관측되었으며, "
-            f"추정 탄소 감축량은 약 {report.carbon_reduction} kgCO2-eq이다.",
-            "이는 탄소배출권 산정을 위한 근거 데이터로서, 본 연구는 탄소배출권 플랫폼 기반 구축에 해당한다. "
-            "향후 제도 연계 및 거래 단계까지 확장을 목표로 한다.",
+            "수위 데이터 수집·현장 검증·기록·보고 문서화 과정을 자동화하였다.",
+            "본 보고서는 탄소배출권 거래 또는 공식 탄소감축량 산정을 완료한 결과물이 아니라, "
+            "향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 MRV 기반 자료로 활용될 수 있다.",
         ]
 
     payload = {
@@ -1163,9 +1163,9 @@ def _draw_visual_mrv_pdf(report_id: int, db: Session):
     gap = 9
     kpis = [
         ("AWD 사이클", _fmt_value(summary["total_awd_cycles"], "회")),
-        ("Flood days",    _fmt_value(summary["flood_days"], "일")),
+        ("Flood days", _fmt_value(summary["flood_days"], "일")),
         ("월 평균 수위", _fmt_value(summary["month_avg_inner_level_cm"], "cm")),
-        ("탄소감축량",  _fmt_value(summary["carbon_reduction_kgco2eq"], " kgCO2-eq")),
+        ("탄소감축량", "미산정"),
     ]
     for i, (label, value) in enumerate(kpis):
         _draw_pdf_card(pdf, 42 + i * (card_w + gap), y, card_w, 56, label, value, regular_font, bold_font)
@@ -1356,11 +1356,11 @@ def _draw_visual_mrv_pdf(report_id: int, db: Session):
     y = y - box_h - 18
 
     summary_table_rows = [
-        ("AWD 사이클",  _fmt_value(summary["total_awd_cycles"], "회")),
-        ("Flood days",    _fmt_value(summary["flood_days"], "일")),
+        ("AWD 사이클", _fmt_value(summary["total_awd_cycles"], "회")),
+        ("Flood days", _fmt_value(summary["flood_days"], "일")),
         ("월 평균 수위", _fmt_value(summary["month_avg_inner_level_cm"], "cm")),
-        ("탄소감축량",  _fmt_value(summary["carbon_reduction_kgco2eq"], " kgCO2-eq")),
-        ("검증 샘플",   _fmt_value(validation["sample_count"], "건")),
+        ("탄소감축량", "미산정"),
+        ("검증 샘플", _fmt_value(validation["sample_count"], "건")),
         ("AI-센서 일치율", _fmt_value(validation["ai_sensor_accuracy"], "%")),
     ]
     y = _draw_pdf_wrapped_text(pdf, "주요 수치 요약", 42, y, int(width - 84), bold_font, 10) - 8
@@ -1440,7 +1440,7 @@ def _draw_visual_mrv_excel(report_id: int, db: Session):
         ("AWD 사이클", _fmt_value(summary["total_awd_cycles"], "회")),
         ("Flood days", _fmt_value(summary["flood_days"], "일")),
         ("월 평균 수위", _fmt_value(summary["month_avg_inner_level_cm"], "cm")),
-        ("탄소감축량", _fmt_value(summary["carbon_reduction_kgco2eq"], " kgCO2-eq")),
+        ("탄소감축량", "미산정"),
     ]
     row = 5
     for idx, (label, value) in enumerate(kpis):
