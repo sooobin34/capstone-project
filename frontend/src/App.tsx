@@ -8,7 +8,6 @@ import AlertPage from './pages/AlertPage'
 import logo from './assets/logo_width.png'
 import ValidationPage from './pages/ValidationPage'
 
-// 전역 Context 타입
 interface FieldContextType {
   selectedRegion: string
   selectedFieldId: number | null
@@ -16,7 +15,6 @@ interface FieldContextType {
   setSelectedFieldId: (id: number | null) => void
 }
 
-// Context 생성 및 export (각 페이지에서 import해서 쓸 거야)
 export const FieldContext = createContext<FieldContextType>({
   selectedRegion: '',
   selectedFieldId: null,
@@ -38,6 +36,7 @@ const navItems = [
 function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const isMobile = window.innerWidth <= 768
+  const menuFontFamily = "'Noto Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
 
   return (
     <nav style={{
@@ -65,7 +64,7 @@ function NavBar() {
           <>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#555', padding: '4px 8px' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#555', padding: '4px 8px', fontFamily: menuFontFamily, fontWeight: 700 }}
             >
               {menuOpen ? 'Close' : 'Menu'}
             </button>
@@ -85,7 +84,8 @@ function NavBar() {
                       display: 'block',
                       padding: '12px 20px',
                       fontSize: '14px',
-                      fontWeight: isActive ? 500 : 400,
+                      fontFamily: menuFontFamily,
+                      fontWeight: isActive ? 800 : 600,
                       color: isActive ? '#1D9E75' : '#555',
                       textDecoration: 'none',
                       background: isActive ? '#f0faf6' : 'white',
@@ -109,8 +109,9 @@ function NavBar() {
                   padding: '6px 14px',
                   borderRadius: '8px',
                   cursor: 'pointer',
+                  fontFamily: menuFontFamily,
                   background: isActive ? '#f0f0f0' : 'transparent',
-                  fontWeight: isActive ? 500 : 400,
+                  fontWeight: isActive ? 800 : 600,
                   color: isActive ? '#222' : '#888',
                   textDecoration: 'none',
                 })}

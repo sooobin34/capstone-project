@@ -10,7 +10,7 @@ export default function MapPage() {
   const [nodes, setNodes] = useState<Node[]>([])
   const [nodeStatuses, setNodeStatuses] = useState<Record<number, any>>({})
   const [loading, setLoading] = useState(true)
-  const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [isPanelOpen, setIsPanelOpen] = useState(true)
   const [selectedNode, setSelectedNode] = useState<any>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
@@ -27,7 +27,7 @@ export default function MapPage() {
     getFields()
       .then(data => {
         setFields(data)
-        setIsPanelOpen(window.innerWidth > 768)
+        setIsPanelOpen(true)
       })
       .catch(e => console.error('논 조회 실패', e))
       .finally(() => setLoading(false))
