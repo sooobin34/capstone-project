@@ -1,7 +1,9 @@
 # AWD Water Management Backend
 
-논 AWD(Alternate Wetting and Drying) 물관리 데이터를 기반으로  
-수위 데이터 저장, 알림 생성, 일일 요약, MRV 보고서 생성 및 검증을 수행하는 백엔드 API 서버입니다.
+논 AWD(Alternate Wetting and Drying) 물관리 데이터를 기반으로 수위 측정, 기록(Report), 검증(Verify)을 수행하고 MRV 기반 데이터를 관리하기 위한 백엔드 API 서버입니다.
+
+본 시스템은 Gold Standard AWD 방법론 기반의
+MRV 자동화 플랫폼 구축을 목표로 합니다.
 
 ---
 
@@ -143,7 +145,7 @@ backend
 - verification_image_url: 일일 단위 대표 이미지 URL (현재는 보조 정보로 사용되며, 실제 검증은 validation_records 기준으로 수행됨)
 
 ### 6) mrv_reports
-→ 월 단위 AWD 수행 결과 및 탄소 감축량을 저장하는 보고서 테이블
+→ 월 단위 AWD 수행 결과 및 MRV 보고서 정보를 저장하는 테이블
 
 - id
 - field_id
@@ -151,7 +153,7 @@ backend
 - total_awd_cycles
 - flood_days
 - status
-- carbon_reduction
+- carbon_reduction (향후 탄소감축량 산정 확장을 위해 유지되는 필드)
 - created_at
 
 ※ 검증 결과는 mrv_reports 테이블에 직접 저장하지 않고, validation_records를 조회하여 보고서 생성 시 자동 집계한다.
@@ -341,10 +343,10 @@ ai_sensor_accuracy =
 
 ---
 
-### MRV 계산식
+### MRV 집계 시 AWD 수행 횟수(total_awd_cycles) 계산
 
-- carbon_reduction = total_awd_cycles × 15.25
-
+※ 본 연구에서는 실제 탄소감축량 산정 및 인증 절차는 수행하지 않았으며,
+향후 탄소감축량 산정 모델 적용을 위한 기반 데이터를 수집합니다.
 ---
 
 ### MRV 집계 기준
@@ -550,9 +552,9 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 - 월간 수위 운영 요약
 - AWD 수행 횟수
 - 담수 유지 일수
-- 탄소감축 추정량
-- 검증(V) 데이터 (센서 vs 사람, 센서 vs AI 포함)
-- 대표 이미지 URL
+- 검증(V) 데이터
+- 대표 이미지
+- MRV 기반 분석 결과
 
 ---
 
@@ -561,7 +563,8 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 - 표지: 보고서 제목, 대상 논, 기간, 작성일 정보
 - 목차: 주요 항목 페이지 구성
 - 결과 분석: 주차별 및 월간 수위 변화 분석
-- AWD 수행 및 탄소 감축 분석: 수행 기준, 횟수 및 탄소 감축량 산정
+- AWD 수행 분석 및 탄소감축 산정 기반
+- AWD 수행 기준 및 수행 횟수 분석
 
 검증 결과:
 - 센서 vs 사람 관찰값 검증 결과 (is_match 기반)
@@ -577,7 +580,7 @@ MRV 보고서는 다음 흐름으로 생성됩니다.
 
 ### MRV Excel 구성
 
-- 요약: 월간 결과 요약 (상태별 일수, AWD 횟수, 탄소 감축량)
+- 요약: 월간 결과 요약 (상태별 일수, AWD 횟수, 검증 결과)
 - 날짜별 흐름 데이터: 날짜 기준으로 노드별 수위 및 상태를 한 행에서 비교 가능
 - 노드별 상세 데이터: 날짜별 노드 단위 상세 데이터
 
