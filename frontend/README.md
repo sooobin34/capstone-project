@@ -150,3 +150,22 @@ VITE_VWORLD_KEY=발급받은_V-WORLD_API_키
 ## 8. 배포
 
 - 배포 URL: https://jeonbuk-mrv.vercel.app
+
+---
+
+## 9. 참고 사항
+
+### 수위 상태 정의
+| 상태 | 기준 | 표시 색상 |
+|---|---|---|
+| OVERFLOODED | 과다 담수 | #1565c0 |
+| FLOODED | 적정 담수 | #1D9E75 |
+| DRYING | 건조 진행 | #BA7517 |
+| DRY | 재관개 필요 | #E24B4A |
+| NO_DATA | 데이터 없음 | #aaa |
+
+### 알림 타입
+| 타입 | 설명 |
+|---|---|
+| LOW_WATER | 수위 -15cm 이하, 재관개 필요 |
+| HIGH_WATER | 수위 5cm 이상, 수위 높음 |
