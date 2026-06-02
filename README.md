@@ -17,7 +17,7 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 
 ---
 
-## 1. 프로젝트 소개
+## 🌟 1. 프로젝트 소개
 
 ### 🌱 배경
 벼농사는 전 세계 메탄(CH₄) 배출의 주요 발생원 중 하나이며, 논을 지속적으로 담수 상태로 유지할 경우 메탄 배출량이 증가합니다. Gold Standard AWD(Alternate Wetting and Drying)는 논을 주기적으로 담수와 배수 상태로 관리하여 메탄 배출을 줄이는 대표적인 물 관리 기법입니다.
@@ -26,225 +26,220 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 그러나 실제 농가에서는 수위 측정, AWD 수행 여부 확인, 데이터 기록 및 보고 과정이 대부분 수작업으로 이루어져 관리 부담이 크고 지속적인 운영이 어렵습니다.
 
 ### 🎯 프로젝트 목표
-본 프로젝트는 IoT 수위 센서, AI 기반 이미지 검증, 웹 기반 MRV(Measurement · Reporting · Verification) 시스템을 활용하여 AWD 관리 과정을 자동화하고 데이터 수집·검증·보고 체계를 구축하는 것을 목표로 합니다. 또한 향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 MRV 기반 플랫폼 구축 가능성을 제시합니다.
+이 프로젝트는 IoT 수위 센서, AI 기반 이미지 검증, 웹 기반 MRV(Measurement · Reporting · Verification) 시스템을 활용하여 AWD 관리 과정을 자동화하고 데이터 수집·검증·보고 체계를 구축하는 것을 목표로 합니다. 또한 향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 MRV 기반 플랫폼 구축 가능성을 제시합니다.
 
 ---
 
-## 2. 프로젝트 팀
+## 🙋‍♂️ 2. 프로젝트 팀
 
-### 팀 소개
+### 👥 팀 소개
 
-(추후 작성)
+전북대학교 컴퓨터인공지능학부 캡스톤디자인 프로젝트 팀으로, IoT·AI·Web 기술을 활용하여 Gold Standard AWD 기반 논 물관리 자동화 및 MRV 플랫폼 구축을 목표로 연구를 수행하였습니다.
 
-### 담당 역할
 
-(추후 작성)
+### 🌐 강세이 - Frontend 개발 담당
+- React 기반 웹 서비스 개발
+- Dashboard, Sensor Data, Map, Alert, MRV, Validation 페이지 구현
+- 모바일 반응형 UI 구현
+- 사용자 인터페이스(UI/UX) 개선
+- 현장 실증 및 시스템 테스트 지원
 
-### 지도교수 및 자문
+### 🧑‍💻 안수빈 - AI 모델 개발 · Backend
+- AWD 논 수위 이미지 데이터 수집 및 라벨링
+- ResNet18 기반 AI 수위 분류 모델 및 계층형(Hierarchical) 모델 개발
+- FastAPI 기반 Backend API 개발
+- MRV 보고서(PDF / Excel) 자동 생성 기능 개발
+- 시스템 통합 테스트 및 기능 검증
 
-(추후 작성)
+### 🌐 장주민 - Frontend 개발 담당
+- React 기반 웹 서비스 개발
+- Dashboard, Sensor Data, Map, Alert, MRV, Validation 페이지 구현
+- 모바일 반응형 UI 구현
+- 사용자 인터페이스(UI/UX) 개선
+- 현장 실증 및 시스템 테스트 지원
+- 캡스톤 관련 문서 및 보고서 작성
+
+### 인숙영 - IoT · Database 개발 담당
+- STM32WL55JC1 기반 센서 노드 개발
+- 초음파 센서 연동 및 LoRaWAN 통신 구현
+- Gateway 연동 및 데이터 전송 기능 개발
+- PostgreSQL 데이터베이스 설계 및 구축
+- FastAPI 기반 Backend API 개발
+- 캡스톤 관련 문서 및 보고서 작성
+
+### 🎓 지도교수 및 자문
+- 지도교수 : 김윤경 교수 (전북대학교)
+- 산학협력 자문 : 최원근 박사 (LX공간정보연구원)
 
 ---
 
-# 3. 시스템 개요
+## 3. 시스템 개요
 
-## 3-1. MRV 프로세스
+이 시스템은 AWD 논의 수위 데이터를 자동으로 수집하고, AI 기반 검증 및 MRV 보고서 생성을 지원하는 IoT · AI · Web 통합 플랫폼입니다.
+
+### 3-1. MRV 프로세스
+MRV(Measurement, Reporting, Verification)는 데이터의 측정, 보고, 검증 과정을 의미합니다.
+![MRV 흐름](docs/mrv흐름.png)
+
+---
+
+### 3-2. 시스템 아키텍처
+
+IoT 센서에서 수집된 수위 데이터를 LoRaWAN을 통해 서버로 전송하고, 데이터베이스에 저장된 정보를 기반으로 AI 검증 및 MRV 보고서 생성 기능을 제공합니다.
+
+![시스템 구조](docs/시스템구조.png)
+
+---
+
+## 4. 주요 기능 및 서비스 화면
+
+### 4-1. AWD 상태 분석 (Dashboard)
+
+수위 데이터를 기반으로 OVERFLOODED, FLOODED, DRYING, DRY 상태를 자동 분석하고 AWD 수행 현황을 시각화합니다.
+
+![Dashboard](docs/dashboard.png)
+
+---
+
+### 4-2. 실시간 수위 모니터링 (Sensor Data)
+
+초음파 센서를 이용하여 논 수위를 측정하고, 시간별 수위 데이터 및 AWD 상태를 조회할 수 있습니다.
+
+![Sensor Data](docs/sensor_data.png)
+
+
+
+---
+
+### 4-3. 위치 기반 논 관리 (Map)
+
+논 위치와 센서 노드 정보를 지도 기반으로 시각화하여 관리할 수 있습니다.
+
+![Map](docs/map.png)
+
+---
+
+### 4-4. 알림 관리 (Alert)
+
+OVERFLOODED 상태 등 이상 상황 발생 시 경고 알림을 생성하고 관리할 수 있습니다.
+
+![Alerts](docs/alerts.png)
+
+---
+
+### 4-5. MRV 보고서 자동 생성 (MRV Reports)
+
+센서 데이터와 검증 결과를 통합하여 PDF 및 Excel 형태의 MRV 보고서를 자동 생성합니다.
+
+![MRV Reports](docs/mrv.png)
+
+---
+
+### 4-6. AI 기반 이미지 검증 (Validation)
+
+논 사진을 업로드하면 AI 모델이 LOW / MID / HIGH 상태를 분류하고, 센서 데이터와 비교하여 검증을 수행합니다.
+
+![Validation 1](docs/validation1.png)
+
+![Validation 2](docs/validation2.png)
+
+---
+
+## 5. 프로젝트 구조
+### 5-1. 전체 프로젝트 구조
 
 ```text
-Measure
-↓
-Report
-↓
-Verify
+backend/               # FastAPI 기반 백엔드 서버
+frontend/              # React 기반 웹 서비스
+iot/                   # STM32 LoRaWAN 센서 노드
+ml/                    # AI 학습 및 추론 코드
+data/                  # AWD 수위 이미지 데이터셋
+data_boundary_low_mid/ # LOW-MID 경계 데이터셋
 ```
 
-## 3-2. 시스템 아키텍처
-
-(PPT 시스템 구조도 삽입)
-
-## 3-3. 데이터 처리 흐름
-
-```text
-센서 데이터 수집
-↓
-일일 상태 분석
-↓
-AI 검증
-↓
-MRV 보고서 생성
-```
-
----
-
-# 4. 주요 기능
-
-## 4-1. 실시간 수위 모니터링
-
-* 초음파 센서를 이용한 논 수위 측정
-* 시간별 수위 데이터 저장 및 조회
-* 웹 대시보드를 통한 실시간 모니터링
-
-## 4-2. LoRaWAN 기반 데이터 수집
-
-* STM32WL55JC1 기반 센서 노드
-* LoRaWAN 무선 통신
-* Gateway를 통한 서버 데이터 전송
-
-## 4-3. AI 기반 이미지 검증
-
-* 논 사진 업로드
-* LOW / MID / HIGH 상태 분류
-* 센서 데이터와 AI 예측 결과 비교 검증
-
-## 4-4. AWD 상태 분석
-
-* OVERFLOODED : 과도한 침수 상태 감지
-* FLOODED : 물이 충분히 존재하는 상태
-* DRYING : AWD 수행을 위한 배수 진행 상태
-* DRY : 재관개가 필요한 건조 상태
-
-## 4-5. MRV 보고서 자동 생성
-
-* PDF 보고서 생성
-* Excel 보고서 생성
-* 센서 데이터 및 검증 결과 통합
-
-## 4-6. 통합 웹 서비스
-
-* Dashboard
-* Sensor Data
-* Validation
-* MRV Reports
-
----
-
-# 5. 서비스 화면
-
-## 5-1. Dashboard
-
-(스크린샷 삽입)
-
-## 5-2. Sensor Data
-
-(스크린샷 삽입)
-
-## 5-3. Validation
-
-(스크린샷 삽입)
-
-## 5-4. MRV Reports
-
-(스크린샷 삽입)
-
----
-
-# 6. 프로젝트 구조
-
-## 6-1. 전체 프로젝트 구조
-
-```text
-backend/
-frontend/
-iot/
-ml/
-data/
-data_boundary_low_mid/
-```
-
-## 6-2. Backend 구조
+### 5-2. Backend 구조
 
 ```text
 backend/
  ┣ app/
- ┃ ┣ api/
- ┃ ┣ models/
- ┃ ┣ schemas/
- ┃ ┣ utils/
- ┃ ┗ core/
- ┣ uploads/
- ┗ requirements.txt
+ ┃ ┣ api/              # REST API 엔드포인트
+ ┃ ┣ models/           # 데이터베이스 모델
+ ┃ ┣ schemas/          # 요청/응답 스키마
+ ┃ ┣ utils/            # 공통 유틸리티
+ ┃ ┗ core/             # 설정 및 DB 연결
+ ┣ uploads/            # 업로드 파일 저장
+ ┗ requirements.txt    # Python 패키지 목록
 ```
 
-## 6-3. Frontend 구조
+### 5-3. Frontend 구조
 
 ```text
 frontend/
  ┣ src/
- ┣ public/
- ┣ assets/
- ┗ components/
+ ┃ ┣ api/              # API 통신 모듈
+ ┃ ┣ components/       # 재사용 UI 컴포넌트
+ ┃ ┣ pages/            # 서비스 페이지
+ ┃ ┣ hooks/            # 커스텀 훅
+ ┃ ┣ data/             # 지역 정보 데이터
+ ┃ ┗ styles/           # 전역 스타일
+ ┣ public/             # 정적 파일
+ ┣ assets/             # 이미지 및 로고
+ ┗ main.tsx            # 애플리케이션 진입점
 ```
 
-## 6-4. IoT 구조
+### 5-4. IoT 구조
 
 ```text
 iot/
- ┣ LoRaWAN_End_Node_LBM/
- ┣ Drivers/
- ┣ Core/
- ┗ Middleware/
+ ┣ LoRaWAN_End_Node_LBM/ # 메인 LoRaWAN 프로젝트
+ ┣ Drivers/              # STM32 드라이버
+ ┣ Core/                 # 애플리케이션 코드
+ ┗ Middleware/           # LoRaWAN 미들웨어
 ```
 
-## 6-5. AI 구조
+### 5-5. AI 구조
 
 ```text
 ml/
- ┣ train_water_classifier.py
- ┣ train_boundary_low_mid.py
- ┣ evaluate_hierarchical_classifier.py
- ┣ inference.py
- ┣ models/
- ┣ results/
- ┗ notebooks/
+ ┣ train_water_classifier.py        # 메인 모델 학습
+ ┣ train_boundary_low_mid.py        # 경계 모델 학습
+ ┣ evaluate_hierarchical_classifier.py # 계층형 모델 평가
+ ┣ inference.py                     # 추론 및 예측
+ ┣ models/                          # 학습된 모델 저장
+ ┣ results/                         # 실험 결과
+ ┗ notebooks/                       # 실험 노트북
 ```
+
 
 ---
 
-# 7. AI 수위 판별 시스템
+# 6. AI 수위 판별 시스템
 
-## 7-1. 데이터 수집 환경
+## 6-1. 데이터 수집 및 라벨링
 
-### 촬영 장비
+실제 논 환경에서 스마트폰(iPhone 13/14)을 이용하여 AWD 수위 이미지를 촬영하였습니다. 
 
-* 스마트폰 카메라(iPhone)
+다양한 촬영 높이(10cm, 50cm, 80cm, 110cm, 140cm, 170cm)와 기상 조건(맑음, 흐림, 그림자, 반사)을 반영하여 데이터를 수집하였습니다.
 
-### 촬영 조건
+수위 0~5cm 구간을 기준으로 LOW, MID, HIGH 클래스로 라벨링하였습니다.
 
-* 실제 논 환경 촬영
-* 맑음 / 흐림 환경 포함
+| Class | Water Level |
+| ----- | ----------- |
+| LOW   | 0~1 cm      |
+| MID   | 2~3 cm      |
+| HIGH  | 4~5 cm      |
 
-### 촬영 높이
+---
 
-* 10cm
-* 50cm
-* 80cm
-* 110cm
-* 140cm
-* 170cm
-
-## 7-2. 데이터 라벨링 기준
-
-### LOW
-
-* 0cm
-* 1cm 수준
-
-### MID
-
-* 2~3cm 수준
-
-### HIGH
-
-* 4~5cm 수준
-
-## 7-3. 데이터셋 구조
+## 6-2. 데이터셋 구조
 
 ### Main Dataset
 
 ```text
-train/
-val/
-test/
+data/
+ ┣ train/
+ ┣ val/
+ ┗ test/
 ```
 
 ### LOW-MID Boundary Dataset
@@ -256,13 +251,19 @@ data_boundary_low_mid/
  ┗ test/
 ```
 
-## 7-4. 모델 구조
+---
 
-* ResNet18
-* Transfer Learning
-* Fine-tuning
+## 6-3. 모델 구조
 
-## 7-5. 계층형(Hierarchical) 구조
+본 연구에서는 ImageNet으로 사전학습된 ResNet18 모델을 기반으로 Transfer Learning 및 Fine-tuning을 적용하여 AWD 수위 분류 모델을 구축하였습니다.
+
+(ResNet18 구조 그림 삽입)
+
+---
+
+## 6-4. 계층형(Hierarchical) 분류 구조
+
+LOW와 MID 구간의 오분류를 줄이기 위해 계층형(Hierarchical) 분류 구조를 적용하였습니다.
 
 ```text
 입력 이미지
@@ -277,25 +278,25 @@ LOW-MID 경계 모델
 최종 결과 출력
 ```
 
-## 7-6. 성능 평가
+(계층형 구조 그림 삽입)
 
-### Accuracy
+---
 
-* ResNet18 : 86.30%
-* Hierarchical : 87.67%
+## 6-5. 성능 평가
+
+### 모델 성능
+
+| Model        | Accuracy |
+| ------------ | -------- |
+| ResNet18     | 86.30%   |
+| Hierarchical | 87.67%   |
 
 ### Confusion Matrix
 
-(이미지 삽입)
+(Confusion Matrix 이미지 삽입)
 
-### 모델 비교 결과
+계층형 분류 구조를 적용하여 LOW와 MID 경계 구간의 오분류를 감소시켰으며, 기존 ResNet18 대비 성능이 향상됨을 확인하였습니다.
 
-| Model           | Accuracy |
-| --------------- | -------- |
-| MobileNetV3     | 실험 결과    |
-| EfficientNet-B0 | 실험 결과    |
-| ResNet18        | 86.30%   |
-| Hierarchical    | 87.67%   |
 
 ---
 
@@ -361,24 +362,18 @@ LOW-MID 경계 모델
 
 # 10. 향후 개선 방향
 
-## 10-1. 실제 농가 실증 확대
-
-## 10-2. AI 데이터셋 확장
-
-## 10-3. AWD 자동 제어 시스템
-
-## 10-4. 탄소감축량 산정 모델 연계
-
-## 10-5. 탄소배출권 제도 연계
+- 실제 농가 실증 확대
+- AI 데이터셋 확장
+- AWD 자동 제어 시스템
+- 탄소감축량 산정 모델 연계
+- 탄소배출권 제도 연계
 
 ---
 
 # 11. 배포 주소
 
 ## Frontend
-
-(Frontend URL)
+[(Frontend URL)](https://jeonbuk-mrv.vercel.app/)
 
 ## Backend (Swagger)
-
-(Backend URL)
+[(Backend URL)](https://capstone-project-54l6.onrender.com/docs)
