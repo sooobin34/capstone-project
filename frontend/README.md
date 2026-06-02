@@ -32,44 +32,32 @@
 ```text
 frontend/src/
  ┣ api/
- ┃ ┣ axios.ts              # Axios 인스턴스 설정
- ┃ ┗ dashboard.ts          # API 호출 함수 모음
- ┣ assets/                 # 이미지, 로고 (AquaPaddy)
+ ┃ ┣ axios.ts              # Axios 인스턴스 및 백엔드 baseURL 설정
+ ┃ ┗ dashboard.ts          # 전체 API 호출 함수 및 타입 정의
+ ┣ assets/                 # 로고 이미지 (AquaPaddy)
  ┣ components/
- ┃ ┣ dashboard/            # 대시보드 컴포넌트
- ┃ ┃ ┣ AlarmSummaryCard.tsx
- ┃ ┃ ┣ MapPreview.tsx
- ┃ ┃ ┣ MrvSummaryCard.tsx
- ┃ ┃ ┣ SensorStatusCard.tsx
- ┃ ┃ ┣ TrendChart.tsx
- ┃ ┃ ┗ WaterLevelCard.tsx
- ┃ ┣ layout/
- ┃ ┃ ┗ Sidebar.tsx
+ ┃ ┣ dashboard/            # 대시보드 카드 컴포넌트
+ ┃ ┃ ┣ AlarmSummaryCard.tsx  # 알람 요약 카드
+ ┃ ┃ ┣ MrvSummaryCard.tsx    # MRV 보고서 요약 카드
+ ┃ ┃ ┗ TrendChart.tsx        # 수위 추이 라인 차트
  ┃ ┣ map/                  # 지도 관련 컴포넌트
- ┃ ┃ ┣ FieldMap.tsx        # Leaflet 지도 (V-WORLD WMTS)
- ┃ ┃ ┣ FieldInfo.tsx       # 노드 상태 패널
- ┃ ┃ ┗ MapPanel.tsx        # 슬라이드 패널 (PC: 왼쪽, 모바일: 하단)
- ┃ ┣ mrv/                  # MRV 관련 컴포넌트
- ┃ ┃ ┣ MrvFilter.tsx
- ┃ ┃ ┗ MrvReportList.tsx
+ ┃ ┃ ┣ FieldMap.tsx          # Leaflet 지도 (V-WORLD WMTS, 지도/위성 전환)
+ ┃ ┃ ┣ FieldInfo.tsx         # 노드 상태 목록 패널
+ ┃ ┃ ┗ MapPanel.tsx          # 슬라이드 패널 (PC: 왼쪽, 모바일: 하단)
  ┃ ┗ sensor/               # 센서 데이터 컴포넌트
- ┃   ┣ SensorChart.tsx
- ┃   ┗ SensorStats.tsx
+ ┃   ┣ SensorChart.tsx       # 수위 변화 라인 차트 (임계치 표시)
+ ┃   ┗ SensorStats.tsx       # 현재 상태 및 24시간 통계 카드
  ┣ data/
- ┃ ┗ regions.ts            # 전라북도 시군 목록
- ┣ hooks/                  # 커스텀 훅
+ ┃ ┗ regions.ts            # 전라북도 14개 시군 목록
  ┣ pages/
- ┃ ┣ AlertPage.tsx         # 알림
- ┃ ┣ Home.tsx              # 대시보드
- ┃ ┣ MapPage.tsx           # 지도 (메인)
- ┃ ┣ MrvPage.tsx           # MRV 보고서
- ┃ ┣ SensorData.tsx        # 센서 데이터
- ┃ ┗ ValidationPage.tsx    # 검증 사진
- ┣ styles/                 # 전역 스타일
- ┣ App.tsx                 # 라우터 + 전역 논/지역 Context
- ┣ App.css
- ┣ index.css
- ┗ main.tsx
+ ┃ ┣ Home.tsx              # 대시보드 (전체 현황 요약)
+ ┃ ┣ MapPage.tsx           # 지도 메인 페이지
+ ┃ ┣ SensorData.tsx        # 센서 데이터 조회
+ ┃ ┣ AlertPage.tsx         # 알람 목록 및 해결 처리
+ ┃ ┣ MrvPage.tsx           # MRV 보고서 생성 및 조회
+ ┃ ┗ ValidationPage.tsx    # 현장 검증 사진 등록 및 AI 분석
+ ┣ App.tsx                 # 라우터 + 전역 논/지역 Context (FieldContext)
+ ┗ main.tsx                # 앱 진입점
 ```
 
 ---
