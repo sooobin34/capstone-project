@@ -8,8 +8,11 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 ## 🌐 IoT · AI · Web 기반 AWD MRV 플랫폼
 
 📅 2026.03 ~ 2026.06
+
 🏫 전북대학교 컴퓨터인공지능학부 캡스톤디자인 프로젝트
+
 🌱 AWD 관리 자동화 및 탄소감축 데이터 기반 구축 연구
+
 📊 MRV(Measurement · Reporting · Verification) 체계 구현 및 탄소배출권 제도 연계를 위한 기반 플랫폼 구축
 
 ---
