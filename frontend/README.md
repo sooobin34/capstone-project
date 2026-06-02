@@ -37,24 +37,39 @@ frontend/src/
  ┣ assets/                 # 이미지, 로고 (AquaPaddy)
  ┣ components/
  ┃ ┣ dashboard/            # 대시보드 컴포넌트
+ ┃ ┃ ┣ AlarmSummaryCard.tsx
+ ┃ ┃ ┣ MapPreview.tsx
+ ┃ ┃ ┣ MrvSummaryCard.tsx
+ ┃ ┃ ┣ SensorStatusCard.tsx
+ ┃ ┃ ┣ TrendChart.tsx
+ ┃ ┃ ┗ WaterLevelCard.tsx
+ ┃ ┣ layout/
+ ┃ ┃ ┗ Sidebar.tsx
  ┃ ┣ map/                  # 지도 관련 컴포넌트
  ┃ ┃ ┣ FieldMap.tsx        # Leaflet 지도 (V-WORLD WMTS)
  ┃ ┃ ┣ FieldInfo.tsx       # 노드 상태 패널
  ┃ ┃ ┗ MapPanel.tsx        # 슬라이드 패널 (PC: 왼쪽, 모바일: 하단)
  ┃ ┣ mrv/                  # MRV 관련 컴포넌트
+ ┃ ┃ ┣ MrvFilter.tsx
+ ┃ ┃ ┗ MrvReportList.tsx
  ┃ ┗ sensor/               # 센서 데이터 컴포넌트
+ ┃   ┣ SensorChart.tsx
+ ┃   ┗ SensorStats.tsx
  ┣ data/
  ┃ ┗ regions.ts            # 전라북도 시군 목록
  ┣ hooks/                  # 커스텀 훅
  ┣ pages/
+ ┃ ┣ AlertPage.tsx         # 알림
  ┃ ┣ Home.tsx              # 대시보드
  ┃ ┣ MapPage.tsx           # 지도 (메인)
- ┃ ┣ SensorData.tsx        # 센서 데이터
- ┃ ┣ AlertPage.tsx         # 알림
  ┃ ┣ MrvPage.tsx           # MRV 보고서
+ ┃ ┣ SensorData.tsx        # 센서 데이터
  ┃ ┗ ValidationPage.tsx    # 검증 사진
+ ┣ styles/                 # 전역 스타일
  ┣ App.tsx                 # 라우터 + 전역 논/지역 Context
- ┗ vite-env.d.ts
+ ┣ App.css
+ ┣ index.css
+ ┗ main.tsx
 ```
 
 ---
