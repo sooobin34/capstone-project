@@ -134,5 +134,4 @@ VITE_VWORLD_KEY=발급받은_V-WORLD_API_키
 
 ## 8. 배포
 
-- Vercel 배포: `feature/happy-frontend-v5` 브랜치 기준 자동 배포
 - 배포 URL: https://jeonbuk-mrv.vercel.app
