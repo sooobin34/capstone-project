@@ -54,17 +54,12 @@ Thumbs.db
 *.sqlite3
 *.db
 
-# =========================
-# 이미지 데이터 제외
-# 폴더 구조/README 유지
-# =========================
-
-data/**
-!data/
+data/**/*
+!data/**/
+!data/**/.gitkeep
 !data/README.md
-!data/.gitkeep
 
-data_boundary_low_mid/**
-!data_boundary_low_mid/
+data_boundary_low_mid/**/*
+!data_boundary_low_mid/**/
+!data_boundary_low_mid/**/.gitkeep
 !data_boundary_low_mid/README.md
-!data_boundary_low_mid/.gitkeep

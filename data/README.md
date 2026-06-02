@@ -2,21 +2,22 @@
 
 ```text
 data/
- ┣ train/
+ ┣ train/ (촬영 높이: 10~110cm)
+ ┃ ┣ low/   (수위 0~1cm)
+ ┃ ┣ mid/   (수위 2~3cm)
+ ┃ ┗ high/  (수위 4~5cm)
+ ┃
+ ┣ val/ (촬영 높이: 140cm)
  ┃ ┣ low/
  ┃ ┣ mid/
  ┃ ┗ high/
  ┃
- ┣ val/
- ┃ ┣ low/
- ┃ ┣ mid/
- ┃ ┗ high/
- ┃
- ┗ test/
+ ┗ test/ (촬영 높이: 170cm)
    ┣ low/
    ┣ mid/
    ┗ high/
 ```
+
 ---
 
 ### 설명
