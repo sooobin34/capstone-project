@@ -78,15 +78,13 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 이 시스템은 AWD 논의 수위 데이터를 자동으로 수집하고, AI 기반 검증 및 MRV 보고서 생성을 지원하는 IoT · AI · Web 통합 플랫폼입니다.
 
 ### 3-1. MRV 프로세스
+
 MRV(Measurement, Reporting, Verification)는 데이터의 측정, 보고, 검증 과정을 의미합니다.
 ![MRV 흐름](docs/mrv_flow.png)
-
----
 
 ### 3-2. 시스템 아키텍처
 
 IoT 센서에서 수집된 수위 데이터를 LoRaWAN을 통해 서버로 전송하고, 데이터베이스에 저장된 정보를 기반으로 AI 검증 및 MRV 보고서 생성 기능을 제공합니다.
-
 ![시스템 구조](docs/system_structure.png)
 
 ---
@@ -96,51 +94,32 @@ IoT 센서에서 수집된 수위 데이터를 LoRaWAN을 통해 서버로 전�
 ### 4-1. AWD 상태 분석 (Dashboard)
 
 수위 데이터를 기반으로 OVERFLOODED, FLOODED, DRYING, DRY 상태를 자동 분석하고 AWD 수행 현황을 시각화합니다.
-
 ![Dashboard](docs/dashboard.png)
-
----
 
 ### 4-2. 실시간 수위 모니터링 (Sensor Data)
 
 초음파 센서를 이용하여 논 수위를 측정하고, 시간별 수위 데이터 및 AWD 상태를 조회할 수 있습니다.
-
 ![Sensor Data](docs/sensor_data.png)
-
-
-
----
 
 ### 4-3. 위치 기반 논 관리 (Map)
 
 논 위치와 센서 노드 정보를 지도 기반으로 시각화하여 관리할 수 있습니다.
-
 ![Map](docs/map.png)
-
----
 
 ### 4-4. 알림 관리 (Alert)
 
-OVERFLOODED 상태 등 이상 상황 발생 시 경고 알림을 생성하고 관리할 수 있습니다.
-
+OVERFLOODED , DRY 상태 등 이상 상황 발생 시 경고 알림을 생성하고 관리할 수 있습니다.
 ![Alerts](docs/alerts.png)
-
----
 
 ### 4-5. MRV 보고서 자동 생성 (MRV Reports)
 
 센서 데이터와 검증 결과를 통합하여 PDF 및 Excel 형태의 MRV 보고서를 자동 생성합니다.
-
 ![MRV Reports](docs/mrv.png)
-
----
 
 ### 4-6. AI 기반 이미지 검증 (Validation)
 
 논 사진을 업로드하면 AI 모델이 LOW / MID / HIGH 상태를 분류하고, 센서 데이터와 비교하여 검증을 수행합니다.
-
 ![사진 업로드](docs/validation1.png)
-
 ![AI 검증](docs/validation2.png)
 
 ---
@@ -227,8 +206,6 @@ ml/
 | MID   | 2~3 cm      |
 | HIGH  | 4~5 cm      |
 
----
-
 ### 6-2. 데이터셋 구조
 
 #### Main Dataset
@@ -270,13 +247,9 @@ data_boundary_low_mid/
    ┗ mid/
 ```
 
----
-
 ### 6-3. 사용 모델
 
 ImageNet으로 사전학습된 ResNet18 모델에 Transfer Learning 및 Fine-tuning을 적용하여 AWD 수위 분류 모델을 구축하였습니다.
-
----
 
 ### 6-4. 계층형(Hierarchical) 분류 구조
 
@@ -284,10 +257,8 @@ LOW와 MID 구간의 오분류를 줄이기 위해 계층형(Hierarchical) 분�
 
 ![계층형 모델 구조](docs/model_structure.png)
 
----
 
 ### 6-5. 성능 평가
-
 #### 모델 성능
 
 | Model        | Accuracy |
@@ -310,7 +281,6 @@ LOW와 MID 경계 구간에 대해 추가 분류 모델을 적용하여 오분�
 | IoT            | STM32WL55JC1, LoRaWAN, A02YYUW Ultrasonic Sensor |
 | Infrastructure | Render, Vercel                                   |
 
-
 ---
 
 ## 🏆 8. 주요 성과
@@ -322,8 +292,6 @@ LOW와 MID 경계 구간에 대해 추가 분류 모델을 적용하여 오분�
 - 현장 사진 기반 AI 검증 체계 구축
 - 향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 기반 마련
 
----
-
 ### 8-2. 시스템 구현 결과
 
 - STM32WL55JC1, LoRaWAN, 초음파 센서를 활용한 수위 측정 시스템 구축
@@ -331,7 +299,6 @@ LOW와 MID 경계 구간에 대해 추가 분류 모델을 적용하여 오분�
 - React 기반 통합 모니터링 웹 서비스 구현
 - PDF 및 Excel 형태의 MRV 보고서 자동 생성 기능 구현
 
----
 
 ### 8-3. AI 기반 검증 체계 구축
 
@@ -341,7 +308,6 @@ LOW와 MID 경계 구간에 대해 추가 분류 모델을 적용하여 오분�
 - 최종 정확도 87.67% 달성
 - 현장 사진 기반 자동 검증 기능을 웹 서비스에 통합
 
----
 
 ### 8-4. MRV 자동화 성과
 
@@ -350,7 +316,6 @@ LOW와 MID 경계 구간에 대해 추가 분류 모델을 적용하여 오분�
 - Verification : AI 기반 현장 사진 검증 자동화
 
 이를 통해 기존 수작업 중심의 AWD 관리 과정을 디지털화하고, MRV 기반 데이터 관리 체계를 구축하였다.
-
 
 ---
 
