@@ -59,7 +59,7 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 - 현장 실증 및 시스템 테스트 지원
 - 캡스톤 관련 문서 및 보고서 작성
 
-### 인숙영 - IoT · Database 개발 담당
+### 📡 인숙영 - IoT · Database 개발 담당
 - STM32WL55JC1 기반 센서 노드 개발
 - 초음파 센서 연동 및 LoRaWAN 통신 구현
 - Gateway 연동 및 데이터 전송 기능 개발
@@ -73,7 +73,7 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 
 ---
 
-## 3. 시스템 개요
+## 🏗️ 3. 시스템 개요
 
 이 시스템은 AWD 논의 수위 데이터를 자동으로 수집하고, AI 기반 검증 및 MRV 보고서 생성을 지원하는 IoT · AI · Web 통합 플랫폼입니다.
 
@@ -91,7 +91,7 @@ IoT 센서에서 수집된 수위 데이터를 LoRaWAN을 통해 서버로 전�
 
 ---
 
-## 4. 주요 기능 및 서비스 화면
+## 🚀 4. 주요 기능 및 서비스 화면
 
 ### 4-1. AWD 상태 분석 (Dashboard)
 
@@ -139,13 +139,13 @@ OVERFLOODED 상태 등 이상 상황 발생 시 경고 알림을 생성하고 �
 
 논 사진을 업로드하면 AI 모델이 LOW / MID / HIGH 상태를 분류하고, 센서 데이터와 비교하여 검증을 수행합니다.
 
-![Validation 1](docs/validation1.png)
+![사진 업로드](docs/validation1.png)
 
-![Validation 2](docs/validation2.png)
+![AI 검증](docs/validation2.png)
 
 ---
 
-## 5. 프로젝트 구조
+## 📂 5. 프로젝트 구조
 ### 5-1. 전체 프로젝트 구조
 
 ```text
@@ -213,15 +213,13 @@ ml/
 
 ---
 
-# 6. AI 수위 판별 시스템
+## 🤖 6. AI 수위 판별 시스템
 
-## 6-1. 데이터 수집 및 라벨링
+### 6-1. 데이터 수집 및 라벨링
 
 실제 논 환경에서 스마트폰(iPhone 13/14)을 이용하여 AWD 수위 이미지를 촬영하였습니다. 
 
-다양한 촬영 높이(10cm, 50cm, 80cm, 110cm, 140cm, 170cm)와 기상 조건(맑음, 흐림, 그림자, 반사)을 반영하여 데이터를 수집하였습니다.
-
-수위 0~5cm 구간을 기준으로 LOW, MID, HIGH 클래스로 라벨링하였습니다.
+다양한 촬영 높이(10cm, 50cm, 80cm, 110cm, 140cm, 170cm)와 환경 조건(맑음, 흐림, 그림자, 반사)을 반영하여 데이터를 수집하였으며, 수위 0~5cm 구간을 기준으로 LOW, MID, HIGH 클래스로 라벨링하였습니다.
 
 | Class | Water Level |
 | ----- | ----------- |
@@ -231,149 +229,162 @@ ml/
 
 ---
 
-## 6-2. 데이터셋 구조
+### 6-2. 데이터셋 구조
 
-### Main Dataset
+#### Main Dataset
 
 ```text
 data/
- ┣ train/
- ┣ val/
- ┗ test/
+ ┣ train/ (촬영 높이: 10~110cm)
+ ┃ ┣ low/   (수위 0~1cm)
+ ┃ ┣ mid/   (수위 2~3cm)
+ ┃ ┗ high/  (수위 4~5cm)
+ ┃
+ ┣ val/ (촬영 높이: 140cm)
+ ┃ ┣ low/
+ ┃ ┣ mid/
+ ┃ ┗ high/
+ ┃
+ ┗ test/ (촬영 높이: 170cm)
+   ┣ low/
+   ┣ mid/
+   ┗ high/
 ```
 
-### LOW-MID Boundary Dataset
+#### LOW-MID Boundary Dataset
+
+LOW와 MID 경계 구간의 오분류를 줄이기 위해 추가 데이터셋을 구성하였습니다.
 
 ```text
 data_boundary_low_mid/
- ┣ train/
- ┣ val/
- ┗ test/
+ ┣ train/ (촬영 높이: 10~110cm)
+ ┃ ┣ low/ (수위 0~1cm)
+ ┃ ┗ mid/ (수위 2~3cm)
+ ┃
+ ┣ val/ (촬영 높이: 140cm)
+ ┃ ┣ low/
+ ┃ ┗ mid/
+ ┃
+ ┗ test/ (촬영 높이: 170cm)
+   ┣ low/
+   ┗ mid/
 ```
 
 ---
 
-## 6-3. 모델 구조
+### 6-3. 사용 모델
 
-본 연구에서는 ImageNet으로 사전학습된 ResNet18 모델을 기반으로 Transfer Learning 및 Fine-tuning을 적용하여 AWD 수위 분류 모델을 구축하였습니다.
-
-(ResNet18 구조 그림 삽입)
+ImageNet으로 사전학습된 ResNet18 모델에 Transfer Learning 및 Fine-tuning을 적용하여 AWD 수위 분류 모델을 구축하였습니다.
 
 ---
 
-## 6-4. 계층형(Hierarchical) 분류 구조
+### 6-4. 계층형(Hierarchical) 분류 구조
 
 LOW와 MID 구간의 오분류를 줄이기 위해 계층형(Hierarchical) 분류 구조를 적용하였습니다.
 
-```text
-입력 이미지
-      ↓
-1차 ResNet18 모델
-(LOW / MID / HIGH)
-      ↓
-MID 예측
-      ↓
-LOW-MID 경계 모델
-      ↓
-최종 결과 출력
-```
-
-(계층형 구조 그림 삽입)
+![계층형 모델 구조](docs/모델구조.png)
 
 ---
 
-## 6-5. 성능 평가
+### 6-5. 성능 평가
 
-### 모델 성능
+#### 모델 성능
 
 | Model        | Accuracy |
 | ------------ | -------- |
 | ResNet18     | 86.30%   |
 | Hierarchical | 87.67%   |
 
-### Confusion Matrix
-
-(Confusion Matrix 이미지 삽입)
-
-계층형 분류 구조를 적용하여 LOW와 MID 경계 구간의 오분류를 감소시켰으며, 기존 ResNet18 대비 성능이 향상됨을 확인하였습니다.
+LOW와 MID 경계 구간에 대해 추가 분류 모델을 적용하여 오분류를 감소시켰으며, 기존 ResNet18 모델 대비 성능이 향상됨을 확인하였습니다.
 
 
 ---
 
-# 8. 기술 스택
+## 🛠️ 7. 기술 스택
 
-## 8-1. Frontend
+| 분야             | 기술                                               |
+| -------------- | ------------------------------------------------ |
+| Frontend       | React, TypeScript, Vite                          |
+| Backend        | FastAPI, SQLAlchemy, PostgreSQL                  |
+| AI             | PyTorch, ResNet18                                |
+| IoT            | STM32WL55JC1, LoRaWAN, A02YYUW Ultrasonic Sensor |
+| Infrastructure | Render, Vercel                                   |
 
-* React
-* TypeScript
-* Vite
-
-## 8-2. Backend
-
-* FastAPI
-* SQLAlchemy
-* PostgreSQL
-
-## 8-3. AI
-
-* PyTorch
-* ResNet18
-
-## 8-4. IoT
-
-* STM32WL55JC1
-* LoRaWAN
-* A02YYUW Ultrasonic Sensor
-
-## 8-5. Infrastructure
-
-* Render
-* Vercel
-* GitHub
 
 ---
 
-# 9. 주요 성과
+## 🏆 8. 주요 성과
 
-## 9-1. 핵심 성과
+### 8-1. 핵심 성과
 
-* MRV 데이터 자동 수집·기록·관리 플랫폼 구축
-* AI 기반 논 상태 검증 체계 구현
-* IoT·AI·웹 통합 자동화 시스템 구현
-
-## 9-2. 시스템 구현 결과
-
-* 센서 데이터 수집 및 저장
-* 웹 기반 모니터링 서비스 구현
-* MRV 보고서 자동 생성 기능 구현
-
-## 9-3. AI 모델 성능 결과
-
-* ResNet18 기반 수위 분류 모델 구축
-* 계층형 구조 적용을 통한 성능 개선
-
-## 9-4. MRV 자동화 성과
-
-* 데이터 수집 자동화
-* 검증 자동화
-* 보고 자동화
+- AWD 물관리 데이터를 자동으로 수집·기록·관리할 수 있는 MRV 기반 플랫폼 구축
+- IoT, AI, Web 기술을 통합한 AWD 관리 자동화 시스템 구현
+- 현장 사진 기반 AI 검증 체계 구축
+- 향후 탄소감축량 산정 및 탄소배출권 제도 연계를 위한 기반 마련
 
 ---
 
-# 10. 향후 개선 방향
+### 8-2. 시스템 구현 결과
 
-- 실제 농가 실증 확대
-- AI 데이터셋 확장
-- AWD 자동 제어 시스템
-- 탄소감축량 산정 모델 연계
-- 탄소배출권 제도 연계
+- STM32WL55JC1, LoRaWAN, 초음파 센서를 활용한 수위 측정 시스템 구축
+- FastAPI 및 PostgreSQL 기반 데이터 수집·관리 서버 구축
+- React 기반 통합 모니터링 웹 서비스 구현
+- PDF 및 Excel 형태의 MRV 보고서 자동 생성 기능 구현
 
 ---
 
-# 11. 배포 주소
+### 8-3. AI 기반 검증 체계 구축
 
-## Frontend
-[(Frontend URL)](https://jeonbuk-mrv.vercel.app/)
+- AWD 논 수위 이미지 데이터셋 구축 및 라벨링 수행
+- ResNet18 기반 AI 수위 분류 모델 개발
+- LOW-MID 경계 구간 개선을 위한 계층형(Hierarchical) 분류 구조 적용
+- 최종 정확도 87.67% 달성
+- 현장 사진 기반 자동 검증 기능을 웹 서비스에 통합
 
-## Backend (Swagger)
-[(Backend URL)](https://capstone-project-54l6.onrender.com/docs)
+---
+
+### 8-4. MRV 자동화 성과
+
+- Measurement : IoT 센서를 활용한 수위 데이터 자동 수집
+- Reporting : MRV 보고서 자동 생성
+- Verification : AI 기반 현장 사진 검증 자동화
+
+이를 통해 기존 수작업 중심의 AWD 관리 과정을 디지털화하고, MRV 기반 데이터 관리 체계를 구축하였다.
+
+
+---
+
+## 🔮 9. 향후 개선 방향
+
+- 실제 농가 대상 장기 실증 확대
+- 다양한 환경의 AI 데이터셋 확장
+- 자동 관개 제어 기능 연계
+- 탄소감축량 산정 모델 적용
+- 탄소배출권 제도 연계 연구 확장
+
+---
+
+## 🌐 10. 배포 주소
+
+### Frontend
+- [Frontend URL](https://jeonbuk-mrv.vercel.app/)
+
+### Backend (Swagger)
+- [Backend URL](https://capstone-project-54l6.onrender.com/docs)
+
+---
+
+## 11. 📚 참고 자료
+
+- Gold Standard AWD Methodology (프로젝트 기획 및 AWD 기준 참고)
+- LoRaWAN Specification (통신 프로토콜 참고)
+- PyTorch Documentation (AI 모델 개발)
+- FastAPI Documentation (Backend 개발)
+
+---
+
+## 12. 📄 License
+
+This project was developed for the Capstone Design course at Jeonbuk National University.
+
+Copyright © 2026 Team AquaPaddy. All rights reserved.
