@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { downloadMrvPdf, downloadMrvExcel, updateMrvReportStatus } from '../../api/dashboard'
+import { downloadMrvPdf, downloadMrvExcel } from '../../api/dashboard'
 
 interface Report {
   id: number
@@ -15,28 +15,7 @@ interface MrvReportListProps {
   onStatusChange?: () => void
 }
 
-const statusLabel = (status: string) => {
-  if (status === 'COMPLETED') return '완료'
-  if (status === 'IN_PROGRESS') return '작성중'
-  return status
-}
-
-export default function MrvReportList({ reports, onStatusChange }: MrvReportListProps) {
-  const [updatingId, setUpdatingId] = useState<number | null>(null)
-
-  const handleStatusChange = async (reportId: number, currentStatus: string) => {
-    const newStatus = currentStatus === 'COMPLETED' ? 'IN_PROGRESS' : 'COMPLETED'
-    setUpdatingId(reportId)
-    try {
-      await updateMrvReportStatus(reportId, newStatus)
-      onStatusChange?.()
-    } catch {
-      alert('상태 변경 실패')
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
+export default function MrvReportList({ reports }: MrvReportListProps) {
   return (
     <div style={{
       background: 'white', border: '0.5px solid #e0e0e0',
@@ -62,20 +41,6 @@ export default function MrvReportList({ reports, onStatusChange }: MrvReportList
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              <button
-                onClick={() => handleStatusChange(report.id, report.status)}
-                disabled={updatingId === report.id}
-                style={{
-                  fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: 500,
-                  background: report.status === 'COMPLETED' ? '#e8f5e9' : '#fff8e1',
-                  color: report.status === 'COMPLETED' ? '#2e7d32' : '#f57f17',
-                  border: 'none', cursor: 'pointer',
-                  opacity: updatingId === report.id ? 0.6 : 1,
-                }}
-              >
-                {updatingId === report.id ? '변경 중...' : statusLabel(report.status)}
-              </button>
-
               <a href={downloadMrvPdf(report.id)}
                 target="_blank"
                 rel="noreferrer"
@@ -87,7 +52,6 @@ export default function MrvReportList({ reports, onStatusChange }: MrvReportList
               >
                 ↓ PDF
               </a>
-
               <a href={downloadMrvExcel(report.id)}
                 target="_blank"
                 rel="noreferrer"
@@ -106,7 +70,6 @@ export default function MrvReportList({ reports, onStatusChange }: MrvReportList
     </div>
   )
 }
-
 
 
 // import { downloadMrvPdf, downloadMrvExcel } from '../../api/dashboard'

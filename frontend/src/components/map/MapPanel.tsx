@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { REGIONS } from '../../data/regions'
 import FieldInfo from './FieldInfo'
-import { getFields as _getFields, Field } from '../../api/dashboard'
+import { Field } from '../../api/dashboard'
 import api from '../../api/axios'
+import { useState } from 'react'
 
 interface MapPanelProps {
   fields: Field[]
   selectedFieldId: number | null
-  onFieldSelect: (fieldId: number) => void
+  selectedRegion: string
+  onFieldSelect: (fieldId: number | null) => void
+  onRegionSelect: (region: string) => void
   onFieldsRefresh: () => void
   sensors: {
     id: number
@@ -21,21 +24,14 @@ interface MapPanelProps {
 }
 
 export default function MapPanel({
-  fields, selectedFieldId, onFieldSelect,
+  fields, selectedFieldId, selectedRegion,
+  onFieldSelect, onRegionSelect,
   onFieldsRefresh, sensors, fieldName, loading
 }: MapPanelProps) {
-  const [selectedRegion, setSelectedRegion] = useState('')
   const [showAddField, setShowAddField] = useState(false)
   const [showAddNode, setShowAddNode] = useState(false)
-
-  const [newField, setNewField] = useState({
-    field_name: '', latitude: '', longitude: '', location_desc: ''
-  })
-
-  const [newNode, setNewNode] = useState({
-    field_id: '', mac_address: '', latitude: '', longitude: '', location_desc: ''
-  })
-
+  const [newField, setNewField] = useState({ field_name: '', latitude: '', longitude: '', location_desc: '' })
+  const [newNode, setNewNode] = useState({ field_id: '', mac_address: '', latitude: '', longitude: '', location_desc: '' })
   const [addLoading, setAddLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -111,9 +107,7 @@ export default function MapPanel({
   })
 
   return (
-    <div style={{ padding: '16px', minWidth: '380px' }}>
-
-      {/* 메시지 */}
+    <div style={{ padding: '16px', minWidth: '320px' }}>
       {message && (
         <div style={{
           fontSize: '12px', padding: '8px 12px', borderRadius: '6px',
@@ -125,7 +119,6 @@ export default function MapPanel({
         </div>
       )}
 
-      {/* 논/노드 추가 영역 */}
       <div style={{ marginBottom: '16px' }}>
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px', fontWeight: 500 }}>추가</p>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -134,94 +127,78 @@ export default function MapPanel({
           <button onClick={() => { setShowAddNode(!showAddNode); setShowAddField(false) }}
             style={{ ...btnStyle('#378ADD'), flex: 1 }}>+ 노드 추가</button>
         </div>
-
-        {/* 논 추가 폼 */}
         {showAddField && (
           <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
             <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>논 추가</p>
             <input placeholder="논 이름 *" value={newField.field_name}
-              onChange={e => setNewField({ ...newField, field_name: e.target.value })}
-              style={inputStyle} />
+              onChange={e => setNewField({ ...newField, field_name: e.target.value })} style={inputStyle} />
             <input placeholder="위도 * (예: 35.8468)" value={newField.latitude}
-              onChange={e => setNewField({ ...newField, latitude: e.target.value })}
-              style={inputStyle} />
+              onChange={e => setNewField({ ...newField, latitude: e.target.value })} style={inputStyle} />
             <input placeholder="경도 * (예: 127.1294)" value={newField.longitude}
-              onChange={e => setNewField({ ...newField, longitude: e.target.value })}
-              style={inputStyle} />
+              onChange={e => setNewField({ ...newField, longitude: e.target.value })} style={inputStyle} />
             <select value={newField.location_desc}
-              onChange={e => setNewField({ ...newField, location_desc: e.target.value })}
-              style={inputStyle}>
+              onChange={e => setNewField({ ...newField, location_desc: e.target.value })} style={inputStyle}>
               <option value="">지역 선택</option>
               {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={handleAddField} disabled={addLoading}
-                style={{ ...btnStyle(), flex: 1 }}>
+              <button onClick={handleAddField} disabled={addLoading} style={{ ...btnStyle(), flex: 1 }}>
                 {addLoading ? '추가 중...' : '추가'}
               </button>
-              <button onClick={() => setShowAddField(false)}
-                style={{ ...btnStyle('#888'), flex: 1 }}>취소</button>
+              <button onClick={() => setShowAddField(false)} style={{ ...btnStyle('#888'), flex: 1 }}>취소</button>
             </div>
           </div>
         )}
-
-        {/* 노드 추가 폼 */}
         {showAddNode && (
           <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
             <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>노드 추가</p>
             <select value={newNode.field_id}
-              onChange={e => setNewNode({ ...newNode, field_id: e.target.value })}
-              style={inputStyle}>
+              onChange={e => setNewNode({ ...newNode, field_id: e.target.value })} style={inputStyle}>
               <option value="">논 선택 *</option>
               {fields.map(f => <option key={f.id} value={f.id}>{f.field_name}</option>)}
             </select>
-            <input placeholder="MAC 주소 * (예: AA:BB:CC:DD:EE:FF)" value={newNode.mac_address}
-              onChange={e => setNewNode({ ...newNode, mac_address: e.target.value })}
-              style={inputStyle} />
-            <input placeholder="위도 * (예: 35.8468)" value={newNode.latitude}
-              onChange={e => setNewNode({ ...newNode, latitude: e.target.value })}
-              style={inputStyle} />
-            <input placeholder="경도 * (예: 127.1294)" value={newNode.longitude}
-              onChange={e => setNewNode({ ...newNode, longitude: e.target.value })}
-              style={inputStyle} />
-            <input placeholder="설명 (예: 중앙 파이프)" value={newNode.location_desc}
-              onChange={e => setNewNode({ ...newNode, location_desc: e.target.value })}
-              style={inputStyle} />
+            <input placeholder="MAC 주소 *" value={newNode.mac_address}
+              onChange={e => setNewNode({ ...newNode, mac_address: e.target.value })} style={inputStyle} />
+            <input placeholder="위도 *" value={newNode.latitude}
+              onChange={e => setNewNode({ ...newNode, latitude: e.target.value })} style={inputStyle} />
+            <input placeholder="경도 *" value={newNode.longitude}
+              onChange={e => setNewNode({ ...newNode, longitude: e.target.value })} style={inputStyle} />
+            <input placeholder="설명" value={newNode.location_desc}
+              onChange={e => setNewNode({ ...newNode, location_desc: e.target.value })} style={inputStyle} />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={handleAddNode} disabled={addLoading}
-                style={{ ...btnStyle('#378ADD'), flex: 1 }}>
+              <button onClick={handleAddNode} disabled={addLoading} style={{ ...btnStyle('#378ADD'), flex: 1 }}>
                 {addLoading ? '추가 중...' : '추가'}
               </button>
-              <button onClick={() => setShowAddNode(false)}
-                style={{ ...btnStyle('#888'), flex: 1 }}>취소</button>
+              <button onClick={() => setShowAddNode(false)} style={{ ...btnStyle('#888'), flex: 1 }}>취소</button>
             </div>
           </div>
         )}
       </div>
 
-      <div style={{ borderTop: '0.5px solid #f0f0f0', marginBottom: '16px' }} />
-
-      {/* 지역/논 선택 영역 */}
       <div style={{ marginBottom: '16px' }}>
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px', fontWeight: 500 }}>지역 선택</p>
         <select value={selectedRegion}
-          onChange={e => setSelectedRegion(e.target.value)}
+          onChange={e => onRegionSelect(e.target.value)}
           style={{ ...inputStyle, marginBottom: '8px' }}>
           <option value="">전체 지역</option>
           {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
 
         <p style={{ fontSize: '11px', color: '#888', marginBottom: '4px', fontWeight: 500 }}>논 선택</p>
-        <select value={selectedFieldId ?? ''}
-          onChange={e => onFieldSelect(Number(e.target.value))}
-          style={inputStyle}>
-          {filteredFields.map(f => <option key={f.id} value={f.id}>{f.field_name}</option>)}
+        <select
+          value={selectedFieldId ?? ''}
+          onChange={e => onFieldSelect(e.target.value ? Number(e.target.value) : null)}
+          style={inputStyle}
+        >
+          <option value="">전체 논</option>
+          {filteredFields.map(f => (
+            <option key={f.id} value={f.id}>{f.field_name}</option>
+          ))}
         </select>
       </div>
 
       <div style={{ borderTop: '0.5px solid #f0f0f0', marginBottom: '16px' }} />
 
-      {/* 센서 상태 */}
       {loading ? (
         <p style={{ fontSize: '13px', color: '#aaa', textAlign: 'center', padding: '24px 0' }}>불러오는 중...</p>
       ) : (
