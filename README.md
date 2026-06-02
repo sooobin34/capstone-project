@@ -79,7 +79,7 @@ Gold Standard AWD 기반 논 물관리 데이터 수집·검증·보고 자동�
 
 ### 3-1. MRV 프로세스
 MRV(Measurement, Reporting, Verification)는 데이터의 측정, 보고, 검증 과정을 의미합니다.
-![MRV 흐름](docs/mrv흐름.png)
+![MRV 흐름](docs/mrv_flow.png)
 
 ---
 
@@ -87,7 +87,7 @@ MRV(Measurement, Reporting, Verification)는 데이터의 측정, 보고, 검증
 
 IoT 센서에서 수집된 수위 데이터를 LoRaWAN을 통해 서버로 전송하고, 데이터베이스에 저장된 정보를 기반으로 AI 검증 및 MRV 보고서 생성 기능을 제공합니다.
 
-![시스템 구조](docs/시스템구조.png)
+![시스템 구조](docs/system_structure.png)
 
 ---
 
@@ -282,7 +282,7 @@ ImageNet으로 사전학습된 ResNet18 모델에 Transfer Learning 및 Fine-tun
 
 LOW와 MID 구간의 오분류를 줄이기 위해 계층형(Hierarchical) 분류 구조를 적용하였습니다.
 
-![계층형 모델 구조](docs/모델구조.png)
+![계층형 모델 구조](docs/model_structure.png)
 
 ---
 
