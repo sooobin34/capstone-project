@@ -10,7 +10,7 @@
 - Axios
 - Chart.js / react-chartjs-2
 - Leaflet / react-leaflet
-- V-WORLD WMTS API (지도 타일)
+- V-WORLD WMTS API (지도 / 위성 타일)
 
 ---
 
