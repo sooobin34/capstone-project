@@ -16,7 +16,7 @@ from app.api import validations
 from app.core.database import engine
 
 
-# 紐⑤뜽 import???좎??대룄 ?섍퀬, ???⑤룄 ??
+# 모델 import
 from app.models.alert import Alert
 from app.models.awd_daily_summary import AwdDailySummary
 from app.models.iot_node import IotNode
@@ -81,7 +81,7 @@ def db_test():
         value = result.scalar()
 
     return {
-        "message": "DB ?곌껐 ?깃났",
+        "message": "DB 연결 성공",
         "result": value
     }
 
