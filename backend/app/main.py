@@ -54,8 +54,20 @@ app.include_router(fields_router)
 app.include_router(validations.router)
 app.include_router(lora_webhook_router)
 
-Path("/var/data/uploads").mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="/var/data/uploads"), name="uploads")
+# =========================
+# Starter 버전 (유료 + Disk 사용)
+# 나중에 Starter + Persistent Disk(/var/data) 다시 쓸 때 이걸 사용
+# =========================
+# UPLOAD_ROOT = Path("/var/data/uploads")
+
+# =========================
+# Free 버전 (디스크 없이 임시 uploads 폴더 사용)
+# 현재 Free 플랜으로 내리기 위해 이걸 사용
+# =========================
+UPLOAD_ROOT = Path("uploads")
+
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
 
 @app.get("/")
 def root():
