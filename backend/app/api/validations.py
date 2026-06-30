@@ -23,7 +23,18 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/validations", tags=["Validations"])
 
-UPLOAD_DIR = Path("/var/data/uploads/validation_records")
+# =========================
+# Starter 버전 (유료 + Disk 사용)
+# 나중에 Starter + Persistent Disk(/var/data) 다시 쓸 때 이걸 사용
+# =========================
+# UPLOAD_DIR = Path("/var/data/uploads/validation_records")
+
+# =========================
+# Free 버전 (디스크 없이 임시 uploads 폴더 사용)
+# 현재 Free 플랜으로 내리기 위해 이걸 사용
+# =========================
+UPLOAD_DIR = Path("uploads/validation_records")
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
